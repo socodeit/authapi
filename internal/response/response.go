@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/volatiletech/authboss"
+	"github.com/socodeit/authboss"
 )
 
 var (

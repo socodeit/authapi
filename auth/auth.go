@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
-	"github.com/volatiletech/authboss"
-	"github.com/volatiletech/authboss/internal/response"
+	"github.com/socodeit/authboss"
+	"github.com/socodeit/authboss/internal/response"
 )
 
 const (

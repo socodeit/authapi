@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/volatiletech/authboss"
-	"github.com/volatiletech/authboss/internal/response"
+	"github.com/socodeit/authboss"
+	"github.com/socodeit/authboss/internal/response"
 )
 
 // Storer and FormValue constants

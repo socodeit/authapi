@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/volatiletech/authboss"
+	"github.com/socodeit/authboss"
 )
 
 // MockUser represents all possible fields a authboss User may have

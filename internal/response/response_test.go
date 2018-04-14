@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/volatiletech/authboss"
-	"github.com/volatiletech/authboss/internal/mocks"
+	"github.com/socodeit/authboss"
+	"github.com/socodeit/authboss/internal/mocks"
 )
 
 var testViewTemplate = template.Must(template.New("").Parse(`{{.external}} {{.fun}} {{.flash_success}} {{.flash_error}} {{.xsrfName}} {{.xsrfToken}}`))

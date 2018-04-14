@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/volatiletech/authboss"
+	"github.com/socodeit/authboss"
 )
 
 const (
