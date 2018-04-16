@@ -19,6 +19,9 @@ type Config struct {
 	ViewsPath string
 	// RootURL is the scheme+host+port of the web application (eg https://www.happiness.com:8080) for url generation.  No trailing slash.
 	RootURL string
+	// SiteURL is the url of frontend website. It is used as mainUrl while sending email confirmation mail i.e., http://mainsite.com/comfirm?token=xxxxx
+	// Created so that user is redirected to frontend, and front end call the server or rooturl
+	SiteURL string
 	// BCryptCost is the cost of the bcrypt password hashing function.
 	BCryptCost int
 
@@ -64,6 +67,7 @@ type Config struct {
 
 	// RecoverOKPath is the redirect path after a successful recovery of a password.
 	RecoverOKPath string
+
 	// RecoverTokenDuration controls how long a token sent via email for password
 	// recovery is valid for.
 	RecoverTokenDuration time.Duration
@@ -162,6 +166,7 @@ func (c *Config) Defaults() {
 	c.MountPath = "/"
 	c.ViewsPath = "./"
 	c.RootURL = "http://localhost:8080"
+	c.SiteURL = "http://localhost:8080"
 	c.BCryptCost = bcrypt.DefaultCost
 
 	c.PrimaryID = StoreEmail

@@ -206,7 +206,7 @@ var goRecoverEmail = func(r *Recover, ctx *authboss.Context, to, encodedToken st
 func (r *Recover) sendRecoverEmail(ctx *authboss.Context, to, encodedToken string) {
 	p := path.Join(r.MountPath, "recover/complete")
 	query := url.Values{formValueToken: []string{encodedToken}}
-	url := fmt.Sprintf("%s%s?%s", r.RootURL, p, query.Encode())
+	url := fmt.Sprintf("%s%s?%s", r.SiteURL, p, query.Encode())
 
 	email := authboss.Email{
 		To:       []string{to},
@@ -281,7 +281,7 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 		if r.Authboss.AllowLoginAfterResetPassword {
 			ctx.SessionStorer.Put(authboss.SessionKey, primaryID)
 		}
-		response.Redirect(ctx, w, req, r.AuthLoginOKPath, "", "", true)
+		response.Redirect(ctx, w, req, r.RecoverOKPath, "Password changed successfully.", "", true)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
