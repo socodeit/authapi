@@ -5,9 +5,7 @@ package response
 
 import (
 	"bytes"
-	"errors"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -16,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/socodeit/authboss"
+	"encoding/json"
+	"errors"
 )
 
 var (
@@ -23,6 +23,16 @@ var (
 	ErrTemplateNotFound = errors.New("Template not found")
 )
 
+type GETJSONResp struct {
+	Error bool `json:"error"`
+	Message interface{} `json:"message"`
+	Params []string `json:"params"`
+}
+
+type POSTJSONResp struct{
+	Error bool `json:"error"`
+	Message interface{} `json:"message"`
+}
 // Templates is a map depicting the forms a template needs wrapped within the specified layout
 type Templates map[string]*template.Template
 
@@ -70,43 +80,22 @@ func LoadTemplates(ab *authboss.Authboss, layout *template.Template, fpath strin
 	return m, nil
 }
 
-// Render renders a view with xsrf and flash attributes.
-func (t Templates) Render(ctx *authboss.Context, w http.ResponseWriter, r *http.Request, name string, data authboss.HTMLData) error {
-	tpl, ok := t[name]
-	if !ok {
-		return authboss.RenderErr{TemplateName: name, Data: data, Err: ErrTemplateNotFound}
+func JSONResponse(ctx *authboss.Context, w http.ResponseWriter, r *http.Request, error bool,message interface{}, params []string) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if params==nil {
+		// POST Response
+		err := json.NewEncoder(w).Encode(POSTJSONResp{Error:error,Message:message})
+		if err!=nil{
+			return err
+		}
+	} else {
+		err := json.NewEncoder(w).Encode(GETJSONResp{Error:error,Message:message,Params:params})
+		if err!=nil{
+			return err
+		}
 	}
-
-	data.MergeKV(
-		"xsrfName", template.HTML(ctx.XSRFName),
-		"xsrfToken", template.HTML(ctx.XSRFMaker(w, r)),
-	)
-
-	if ctx.LayoutDataMaker != nil {
-		data.Merge(ctx.LayoutDataMaker(w, r))
-	}
-
-	if flash, ok := ctx.SessionStorer.Get(authboss.FlashSuccessKey); ok {
-		ctx.SessionStorer.Del(authboss.FlashSuccessKey)
-		data.MergeKV(authboss.FlashSuccessKey, flash)
-	}
-	if flash, ok := ctx.SessionStorer.Get(authboss.FlashErrorKey); ok {
-		ctx.SessionStorer.Del(authboss.FlashErrorKey)
-		data.MergeKV(authboss.FlashErrorKey, flash)
-	}
-
-	buffer := &bytes.Buffer{}
-	err := tpl.ExecuteTemplate(buffer, tpl.Name(), data)
-	if err != nil {
-		return authboss.RenderErr{TemplateName: tpl.Name(), Data: data, Err: ErrTemplateNotFound}
-	}
-
-	_, err = io.Copy(w, buffer)
-	if err != nil {
-		return authboss.RenderErr{TemplateName: tpl.Name(), Data: data, Err: ErrTemplateNotFound}
-	}
-
-	return nil
+	return nil;
 }
 
 // RenderEmail renders the html and plaintext views for an email and sends it
@@ -138,22 +127,4 @@ func Email(mailer authboss.Mailer, email authboss.Email, htmlTpls Templates, nam
 	}
 
 	return nil
-}
-
-// Redirect sets any flash messages given and redirects the user.
-// If flashSuccess or flashError are set they will be set in the session.
-// If followRedir is set to true, it will attempt to grab the redirect path from the
-// query string.
-func Redirect(ctx *authboss.Context, w http.ResponseWriter, r *http.Request, path, flashSuccess, flashError string, followRedir bool) {
-	if redir := r.FormValue(authboss.FormValueRedirect); redir != "" && followRedir {
-		path = redir
-	}
-
-	if len(flashSuccess) > 0 {
-		ctx.SessionStorer.Put(authboss.FlashSuccessKey, flashSuccess)
-	}
-	if len(flashError) > 0 {
-		ctx.SessionStorer.Put(authboss.FlashErrorKey, flashError)
-	}
-	http.Redirect(w, r, path, http.StatusFound)
 }

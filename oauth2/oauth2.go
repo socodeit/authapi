@@ -223,8 +223,7 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 	}
 
 	sf := fmt.Sprintf("Logged in successfully with %s.", strings.Title(provider))
-	response.Redirect(ctx, w, r, redirect, sf, "", false)
-	return nil
+	return response.JSONResponse(ctx,w,r,false,sf,nil);
 }
 
 func (o *OAuth2) logout(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
@@ -234,7 +233,7 @@ func (o *OAuth2) logout(ctx *authboss.Context, w http.ResponseWriter, r *http.Re
 		ctx.CookieStorer.Del(authboss.CookieRemember)
 		ctx.SessionStorer.Del(authboss.SessionLastAction)
 
-		response.Redirect(ctx, w, r, o.AuthLogoutOKPath, "You have logged out", "", true)
+		return response.JSONResponse(ctx,w,r,false,"Logged out successfully.",nil)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

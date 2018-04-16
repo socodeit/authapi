@@ -199,7 +199,5 @@ func (c *Confirm) confirmHandler(ctx *authboss.Context, w http.ResponseWriter, r
 		}
 		ctx.SessionStorer.Put(authboss.SessionKey, key)
 	}
-	response.Redirect(ctx, w, r, c.RegisterOKPath, "You have successfully confirmed your account.", "", true)
-
-	return nil
+	return response.JSONResponse(ctx,w,r,false,"Account confirmed.",nil)
 }

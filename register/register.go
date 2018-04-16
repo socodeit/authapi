@@ -70,14 +70,7 @@ func (r *Register) Storage() authboss.StorageOptions {
 func (reg *Register) registerHandler(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case "GET":
-		primaryID := r.FormValue("primaryID")
-
-		data := authboss.HTMLData{
-			"primaryID":         reg.PrimaryID,
-			"primaryIDValue":    primaryID,
-			"primaryIDReadonly": len(primaryID) > 0,
-		}
-		return reg.templates.Render(ctx, w, r, tplRegister, data)
+		return response.JSONResponse(ctx,w,r,false,"This api ised for user registration.",[]string{"<user-defined>","email","password","confirm_password","csrf_token"})
 	case "POST":
 		return reg.registerPostHandler(ctx, w, r)
 	}
@@ -97,17 +90,7 @@ func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseW
 	}
 
 	if len(validationErrs) != 0 {
-		data := authboss.HTMLData{
-			"primaryID":      reg.PrimaryID,
-			"primaryIDValue": key,
-			"errs":           validationErrs.Map(),
-		}
-
-		for _, f := range reg.PreserveFields {
-			data[f] = r.FormValue(f)
-		}
-
-		return reg.templates.Render(ctx, w, r, tplRegister, data)
+		return response.JSONResponse(ctx,w,r,true,validationErrs.Map(),nil)
 	}
 
 	attr, err := authboss.AttributesFromRequest(r) // Attributes from overriden forms
@@ -125,17 +108,7 @@ func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseW
 	ctx.User = attr
 
 	if err := ctx.Storer.(RegisterStorer).Create(key, attr); err == authboss.ErrUserFound {
-		data := authboss.HTMLData{
-			"primaryID":      reg.PrimaryID,
-			"primaryIDValue": key,
-			"errs":           map[string][]string{reg.PrimaryID: []string{"Already in use"}},
-		}
-
-		for _, f := range reg.PreserveFields {
-			data[f] = r.FormValue(f)
-		}
-
-		return reg.templates.Render(ctx, w, r, tplRegister, data)
+		return response.JSONResponse(ctx,w,r,true,map[string][]string{reg.PrimaryID: []string{"Already in use"}},nil)
 	} else if err != nil {
 		return err
 	}
@@ -145,12 +118,9 @@ func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseW
 	}
 
 	if reg.IsLoaded("confirm") {
-		response.Redirect(ctx, w, r, reg.RegisterOKPath, "Account successfully created, please verify your e-mail address.", "", true)
-		return nil
+		return response.JSONResponse(ctx,w,r,false,"Account successfully created, please verify your e-mail address.",nil)
 	}
 
 	ctx.SessionStorer.Put(authboss.SessionKey, key)
-	response.Redirect(ctx, w, r, reg.RegisterOKPath, "Account successfully created, you are now logged in.", "", true)
-
-	return nil
+	return response.JSONResponse(ctx,w,r,false,"Account successfully created, you are now logged in.",nil)
 }

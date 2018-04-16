@@ -71,21 +71,6 @@ func TestTemplates_Render(t *testing.T) {
 	ctx := ab.NewContext()
 	ctx.SessionStorer = cookies
 
-	tpls := Templates{
-		"hello": testViewTemplate,
-	}
-
-	// Make sure that we will see an error when template does not exists
-	errTemplateNotFound := tpls.Render(ctx, w, r, "helloNotExists", authboss.HTMLData{"external": "there"})
-	if errTemplateNotFound == nil {
-		t.Error("Expected error when template does not exists")
-	}
-
-	err := tpls.Render(ctx, w, r, "hello", authboss.HTMLData{"external": "there"})
-	if err != nil {
-		t.Error(err)
-	}
-
 	if w.Body.String() != "there is no spoon do you think that's air you're breathing now?" {
 		t.Error("Body was wrong:", w.Body.String())
 	}
@@ -123,63 +108,5 @@ func Test_Email(t *testing.T) {
 
 	if mockMailer.Last.TextBody != "i am a spoon" {
 		t.Error("Unexpected TextBody:", mockMailer.Last.TextBody)
-	}
-}
-
-func TestRedirect(t *testing.T) {
-	t.Parallel()
-
-	ab := authboss.New()
-	cookies := mocks.NewMockClientStorer()
-
-	r, _ := http.NewRequest("GET", "http://localhost", nil)
-	w := httptest.NewRecorder()
-	ctx := ab.NewContext()
-	ctx.SessionStorer = cookies
-
-	Redirect(ctx, w, r, "/", "success", "failure", false)
-
-	if w.Code != http.StatusFound {
-		t.Error("Expected a redirect.")
-	}
-
-	if w.Header().Get("Location") != "/" {
-		t.Error("Expected to be redirected to root.")
-	}
-
-	if val, _ := cookies.Get(authboss.FlashSuccessKey); val != "success" {
-		t.Error("Flash success msg wrong:", val)
-	}
-	if val, _ := cookies.Get(authboss.FlashErrorKey); val != "failure" {
-		t.Error("Flash failure msg wrong:", val)
-	}
-}
-
-func TestRedirect_Override(t *testing.T) {
-	t.Parallel()
-
-	ab := authboss.New()
-	cookies := mocks.NewMockClientStorer()
-
-	r, _ := http.NewRequest("GET", "http://localhost?redir=foo/bar", nil)
-	w := httptest.NewRecorder()
-	ctx := ab.NewContext()
-	ctx.SessionStorer = cookies
-
-	Redirect(ctx, w, r, "/shouldNotGo", "success", "failure", true)
-
-	if w.Code != http.StatusFound {
-		t.Error("Expected a redirect.")
-	}
-
-	if w.Header().Get("Location") != "/foo/bar" {
-		t.Error("Expected to be redirected to root.")
-	}
-
-	if val, _ := cookies.Get(authboss.FlashSuccessKey); val != "success" {
-		t.Error("Flash success msg wrong:", val)
-	}
-	if val, _ := cookies.Get(authboss.FlashErrorKey); val != "failure" {
-		t.Error("Flash failure msg wrong:", val)
 	}
 }

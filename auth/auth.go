@@ -71,51 +71,34 @@ func (a *Auth) Storage() authboss.StorageOptions {
 func (a *Auth) loginHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case methodGET:
-		data := authboss.NewHTMLData(
-			"showRemember", a.IsLoaded("remember"),
-			"showRecover", a.IsLoaded("recover"),
-			"showRegister", a.IsLoaded("register"),
-			"primaryID", a.PrimaryID,
-			"primaryIDValue", "",
-		)
-		return a.templates.Render(ctx, w, r, tplLogin, data)
+		return response.JSONResponse(ctx,w,r,false,"This api is used for logging in.",[]string{"email","password","csrf_token"})
 	case methodPOST:
 		key := r.FormValue(a.PrimaryID)
 		password := r.FormValue("password")
 
-		errData := authboss.NewHTMLData(
-			"error", fmt.Sprintf("invalid %s and/or password", a.PrimaryID),
-			"primaryID", a.PrimaryID,
-			"primaryIDValue", key,
-			"showRemember", a.IsLoaded("remember"),
-			"showRecover", a.IsLoaded("recover"),
-			"showRegister", a.IsLoaded("register"),
-		)
-
+		message := "Login Successful."
 		if valid, err := validateCredentials(ctx, key, password); err != nil {
-			errData["error"] = "Internal server error"
+			message = "Internal server error"
 			fmt.Fprintf(ctx.LogWriter, "auth: validate credentials failed: %v\n", err)
-			return a.templates.Render(ctx, w, r, tplLogin, errData)
+			return response.JSONResponse(ctx,w,r,true,message,nil)
 		} else if !valid {
 			if err := a.Callbacks.FireAfter(authboss.EventAuthFail, ctx); err != nil {
 				fmt.Fprintf(ctx.LogWriter, "EventAuthFail callback error'd out: %v\n", err)
 			}
-			return a.templates.Render(ctx, w, r, tplLogin, errData)
+			return response.JSONResponse(ctx,w,r,true,fmt.Sprintf("invalid %s and/or password", a.PrimaryID),nil)
 		}
 
 		interrupted, err := a.Callbacks.FireBefore(authboss.EventAuth, ctx)
 		if err != nil {
 			return err
 		} else if interrupted != authboss.InterruptNone {
-			var reason string
 			switch interrupted {
 			case authboss.InterruptAccountLocked:
-				reason = "Your account has been locked."
+				message = "Your account has been locked."
 			case authboss.InterruptAccountNotConfirmed:
-				reason = "Your account has not been confirmed."
+				message = "Your account has not been confirmed."
 			}
-			response.Redirect(ctx, w, r, a.AuthLoginFailPath, "", reason, false)
-			return nil
+			response.JSONResponse(ctx,w,r,true,message,nil)
 		}
 
 		ctx.SessionStorer.Put(authboss.SessionKey, key)
@@ -125,7 +108,7 @@ func (a *Auth) loginHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r 
 		if err := a.Callbacks.FireAfter(authboss.EventAuth, ctx); err != nil {
 			return err
 		}
-		response.Redirect(ctx, w, r, a.AuthLoginOKPath, "", "", true)
+		response.JSONResponse(ctx,w,r,false,message,nil)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -158,8 +141,7 @@ func (a *Auth) logoutHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r
 		ctx.SessionStorer.Del(authboss.SessionKey)
 		ctx.CookieStorer.Del(authboss.CookieRemember)
 		ctx.SessionStorer.Del(authboss.SessionLastAction)
-
-		response.Redirect(ctx, w, r, a.AuthLogoutOKPath, "You have logged out", "", true)
+		return response.JSONResponse(ctx,w,r,false,"Logged out successfully.",nil)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

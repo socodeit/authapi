@@ -127,32 +127,18 @@ func (r *Recover) Storage() authboss.StorageOptions {
 func (rec *Recover) startHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case methodGET:
-		data := authboss.NewHTMLData(
-			"primaryID", rec.PrimaryID,
-			"primaryIDValue", "",
-			"confirmPrimaryIDValue", "",
-		)
-
-		return rec.templates.Render(ctx, w, r, tplRecover, data)
+		return response.JSONResponse(ctx,w,r,false,"This api is used to restore/recover account.",[]string{rec.PrimaryID,"confirm_"+rec.PrimaryID,"csrf_token"})
 	case methodPOST:
 		primaryID := r.FormValue(rec.PrimaryID)
-		confirmPrimaryID := r.FormValue(fmt.Sprintf("confirm_%s", rec.PrimaryID))
-
-		errData := authboss.NewHTMLData(
-			"primaryID", rec.PrimaryID,
-			"primaryIDValue", primaryID,
-			"confirmPrimaryIDValue", confirmPrimaryID,
-		)
 
 		policies := authboss.FilterValidators(rec.Policies, rec.PrimaryID)
 		if validationErrs := authboss.Validate(r, policies, rec.PrimaryID, authboss.ConfirmPrefix+rec.PrimaryID).Map(); len(validationErrs) > 0 {
-			errData.MergeKV("errs", validationErrs)
-			return rec.templates.Render(ctx, w, r, tplRecover, errData)
+			return response.JSONResponse(ctx,w,r,true,validationErrs,nil)
 		}
 
 		// redirect to login when user not found to prevent username sniffing
 		if err := ctx.LoadUser(primaryID); err == authboss.ErrUserNotFound {
-			return authboss.ErrAndRedirect{Err: err, Location: rec.RecoverOKPath, FlashError: recoverUserNotFound}
+			return response.JSONResponse(ctx,w,r,true,recoverUserNotFound,nil)
 		} else if err != nil {
 			return err
 		}
@@ -175,9 +161,8 @@ func (rec *Recover) startHandlerFunc(ctx *authboss.Context, w http.ResponseWrite
 		}
 
 		goRecoverEmail(rec, ctx, email, encodedToken)
+		return response.JSONResponse(ctx,w,r,false,recoverInitiateSuccessFlash,nil)
 
-		ctx.SessionStorer.Put(authboss.FlashSuccessKey, recoverInitiateSuccessFlash)
-		response.Redirect(ctx, w, r, rec.RecoverOKPath, "", "", true)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -225,14 +210,13 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 	case methodGET:
 		_, err = verifyToken(ctx, req)
 		if err == errRecoveryTokenExpired {
-			return authboss.ErrAndRedirect{Err: err, Location: "/recover", FlashError: recoverTokenExpiredFlash}
+			return response.JSONResponse(ctx,w,req,true,recoverTokenExpiredFlash,nil)
 		} else if err != nil {
-			return authboss.ErrAndRedirect{Err: err, Location: "/"}
+			return response.JSONResponse(ctx,w,req,true,err,[]string{"password","confirm_password","token","csrf_token"})
 		}
 
 		token := req.FormValue(formValueToken)
-		data := authboss.NewHTMLData(formValueToken, token)
-		return r.templates.Render(ctx, w, req, tplRecoverComplete, data)
+		return response.JSONResponse(ctx,w,req,false,"Token: "+token,nil)
 	case methodPOST:
 		token := req.FormValue(formValueToken)
 		if len(token) == 0 {
@@ -244,11 +228,7 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 
 		policies := authboss.FilterValidators(r.Policies, authboss.StorePassword)
 		if validationErrs := authboss.Validate(req, policies, authboss.StorePassword, authboss.ConfirmPrefix+authboss.StorePassword).Map(); len(validationErrs) > 0 {
-			data := authboss.NewHTMLData(
-				formValueToken, token,
-				"errs", validationErrs,
-			)
-			return r.templates.Render(ctx, w, req, tplRecoverComplete, data)
+			return response.JSONResponse(ctx,w,req,true,validationErrs,nil)
 		}
 
 		if ctx.User, err = verifyToken(ctx, req); err != nil {
@@ -281,7 +261,7 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 		if r.Authboss.AllowLoginAfterResetPassword {
 			ctx.SessionStorer.Put(authboss.SessionKey, primaryID)
 		}
-		response.Redirect(ctx, w, req, r.RecoverOKPath, "Password changed successfully.", "", true)
+		return response.JSONResponse(ctx,w,req,false,"Password changed successfully.",nil)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

@@ -66,13 +66,15 @@ func (c contextRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Do specific error handling for special kinds of errors.
 	switch e := err.(type) {
 	case ErrAndRedirect:
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
 		if len(e.FlashSuccess) > 0 {
-			ctx.SessionStorer.Put(FlashSuccessKey, e.FlashSuccess)
+			w.Write([]byte("{\"error\":false,\"message\":\""+e.FlashSuccess+"\"}"))
 		}
 		if len(e.FlashError) > 0 {
-			ctx.SessionStorer.Put(FlashErrorKey, e.FlashError)
+			w.Write([]byte("{\"error\":false,\"message\":\""+e.FlashError+"\"}"))
 		}
-		http.Redirect(w, r, e.Location, http.StatusFound)
 	case ClientDataErr:
 		if c.BadRequestHandler != nil {
 			c.BadRequestHandler.ServeHTTP(w, r)
@@ -131,11 +133,9 @@ func redirectIfLoggedIn(ctx *Context, w http.ResponseWriter, r *http.Request) (h
 	}
 
 	if cu != nil {
-		if redir := r.FormValue(FormValueRedirect); len(redir) > 0 {
-			http.Redirect(w, r, redir, http.StatusFound)
-		} else {
-			http.Redirect(w, r, ctx.AuthLoginOKPath, http.StatusFound)
-		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("{\"error\":false,\"message\":\"Already logged in.\"}"))
 		return true
 	}
 
