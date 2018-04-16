@@ -54,9 +54,6 @@ func TestTemplates_Render(t *testing.T) {
 
 	cookies := mocks.NewMockClientStorer()
 	ab := authboss.New()
-	ab.LayoutDataMaker = func(_ http.ResponseWriter, _ *http.Request) authboss.HTMLData {
-		return authboss.HTMLData{"fun": "is"}
-	}
 	ab.XSRFName = "do you think"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "that's air you're breathing now?"

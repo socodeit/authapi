@@ -63,7 +63,6 @@ func init() {
 // Recover module
 type Recover struct {
 	*authboss.Authboss
-	templates          response.Templates
 	emailHTMLTemplates response.Templates
 	emailTextTemplates response.Templates
 }
@@ -86,11 +85,6 @@ func (r *Recover) Initialize(ab *authboss.Authboss) (err error) {
 
 	if r.XSRFMaker == nil {
 		return errors.New("auth: XSRFMaker must be defined")
-	}
-
-	r.templates, err = response.LoadTemplates(r.Authboss, r.Layout, r.ViewsPath, tplRecover, tplRecoverComplete)
-	if err != nil {
-		return err
 	}
 
 	r.emailHTMLTemplates, err = response.LoadTemplates(r.Authboss, r.LayoutHTMLEmail, r.ViewsPath, tplInitHTMLEmail)

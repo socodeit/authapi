@@ -30,7 +30,6 @@ func init() {
 // Register module.
 type Register struct {
 	*authboss.Authboss
-	templates response.Templates
 }
 
 // Initialize the module.
@@ -43,10 +42,6 @@ func (r *Register) Initialize(ab *authboss.Authboss) (err error) {
 		}
 	} else if r.StoreMaker == nil {
 		return errors.New("register: Need a RegisterStorer")
-	}
-
-	if r.templates, err = response.LoadTemplates(r.Authboss, r.Layout, r.ViewsPath, tplRegister); err != nil {
-		return err
 	}
 
 	return nil

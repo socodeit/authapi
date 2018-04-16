@@ -34,18 +34,12 @@ type Config struct {
 	// Allow the user to be automatically signed in after reset his password
 	AllowLoginAfterResetPassword bool
 
-	// Layout that all authboss views will be inserted into.
-	Layout *template.Template
 	// LayoutHTMLEmail is for emails going out in HTML form, authbosses e-mail templates
 	// will be inserted into this layout.
 	LayoutHTMLEmail *template.Template
 	// LayoutTextEmail is for emails going out in text form, authbosses e-mail templates
 	// will be inserted into this layout.
 	LayoutTextEmail *template.Template
-	// LayoutDataMaker is a function that can provide authboss with the layout's
-	// template data. It will be merged with the data being provided for the current
-	// view in order to render the templates.
-	LayoutDataMaker ViewDataMaker
 
 	// OAuth2Providers lists all providers that can be used. See
 	// OAuthProvider documentation for more details.
@@ -58,22 +52,9 @@ type Config struct {
 	// NotFoundHandler handles would be 404 errors.
 	NotFoundHandler http.Handler
 
-	// AuthLoginOKPath is the redirect path after a successful authentication.
-	AuthLoginOKPath string
-	// AuthLoginFailPath is the redirect path after a failed authentication.
-	AuthLoginFailPath string
-	// AuthLogoutOKPath is the redirect path after a log out.
-	AuthLogoutOKPath string
-
-	// RecoverOKPath is the redirect path after a successful recovery of a password.
-	RecoverOKPath string
-
 	// RecoverTokenDuration controls how long a token sent via email for password
 	// recovery is valid for.
 	RecoverTokenDuration time.Duration
-
-	// RegisterOKPath is the redirect path after a successful registration.
-	RegisterOKPath string
 
 	// Policies control validation of form fields and are automatically run
 	// against form posts that include the fields.
@@ -81,9 +62,6 @@ type Config struct {
 	// ConfirmFields are fields that are supposed to be submitted with confirmation
 	// fields alongside them, passwords, emails etc.
 	ConfirmFields []string
-	// PreserveFields are fields used with registration that are to be rendered when
-	// post fails.
-	PreserveFields []string
 
 	// ExpireAfter controls the time an account is idle before being logged out
 	// by the ExpireMiddleware.
@@ -171,18 +149,10 @@ func (c *Config) Defaults() {
 
 	c.PrimaryID = StoreEmail
 
-	c.Layout = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{template "authboss" .}}</body></html>`))
 	c.LayoutHTMLEmail = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{template "authboss" .}}</body></html>`))
 	c.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "authboss" .}}`))
 
-	c.AuthLoginOKPath = "/"
-	c.AuthLoginFailPath = "/"
-	c.AuthLogoutOKPath = "/"
-
-	c.RecoverOKPath = "/"
 	c.RecoverTokenDuration = time.Duration(24) * time.Hour
-
-	c.RegisterOKPath = "/"
 
 	c.Policies = []Validator{
 		Rules{

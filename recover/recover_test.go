@@ -26,7 +26,6 @@ func testSetup() (r *Recover, s *mocks.MockStorer, l *bytes.Buffer) {
 	l = &bytes.Buffer{}
 
 	ab := authboss.New()
-	ab.Layout = template.Must(template.New("").Parse(`{{template "authboss" .}}`))
 	ab.LayoutHTMLEmail = template.Must(template.New("").Parse(`<strong>{{template "authboss" .}}</strong>`))
 	ab.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "authboss" .}}`))
 	ab.Storer = s

@@ -2,7 +2,6 @@ package register
 
 import (
 	"bytes"
-	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -16,7 +15,6 @@ import (
 func setup() *Register {
 	ab := authboss.New()
 	ab.RegisterOKPath = "/regsuccess"
-	ab.Layout = template.Must(template.New("").Parse(`{{template "authboss" .}}`))
 	ab.XSRFName = "xsrf"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "xsrfvalue"

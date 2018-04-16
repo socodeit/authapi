@@ -25,7 +25,6 @@ func init() {
 // Auth module
 type Auth struct {
 	*authboss.Authboss
-	templates response.Templates
 }
 
 // Initialize module
@@ -42,11 +41,6 @@ func (a *Auth) Initialize(ab *authboss.Authboss) (err error) {
 
 	if a.XSRFMaker == nil {
 		return errors.New("auth: XSRFMaker must be defined")
-	}
-
-	a.templates, err = response.LoadTemplates(a.Authboss, a.Layout, a.ViewsPath, tplLogin)
-	if err != nil {
-		return err
 	}
 
 	return nil
