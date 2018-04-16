@@ -40,6 +40,7 @@ const (
 	recoverInitiateSuccessFlash = "An email has been sent with further instructions on how to reset your password"
 	recoverTokenExpiredFlash    = "Account recovery request has expired. Please try again."
 	recoverFailedErrorFlash     = "Account recovery has failed. Please contact tech support."
+	recoverUserNotFound			 = "User not found with this email id."
 )
 
 var errRecoveryTokenExpired = errors.New("recovery token expired")
@@ -151,7 +152,7 @@ func (rec *Recover) startHandlerFunc(ctx *authboss.Context, w http.ResponseWrite
 
 		// redirect to login when user not found to prevent username sniffing
 		if err := ctx.LoadUser(primaryID); err == authboss.ErrUserNotFound {
-			return authboss.ErrAndRedirect{Err: err, Location: rec.RecoverOKPath, FlashSuccess: recoverInitiateSuccessFlash}
+			return authboss.ErrAndRedirect{Err: err, Location: rec.RecoverOKPath, FlashError: recoverUserNotFound}
 		} else if err != nil {
 			return err
 		}
