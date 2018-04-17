@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -23,7 +22,7 @@ var (
 
 // OAuth2 module
 type OAuth2 struct {
-	*authapi.authapi
+	*authapi.Authapi
 }
 
 func init() {
@@ -31,8 +30,8 @@ func init() {
 }
 
 // Initialize module
-func (o *OAuth2) Initialize(ab *authapi.authapi) error {
-	o.authapi = ab
+func (o *OAuth2) Initialize(ab *authapi.Authapi) error {
+	o.Authapi = ab
 	if o.OAuth2Storer == nil && o.OAuth2StoreMaker == nil {
 		return errors.New("oauth2: need an OAuth2Storer")
 	}
@@ -143,15 +142,7 @@ func (o *OAuth2) oauthCallback(ctx *authapi.Context, w http.ResponseWriter, r *h
 
 	hasErr := r.FormValue("error")
 	if len(hasErr) > 0 {
-		if err := o.Callbacks.FireAfter(authapi.EventOAuthFail, ctx); err != nil {
-			return err
-		}
-
-		return authapi.ErrAndRedirect{
-			Err:        errors.New(r.FormValue("error_reason")),
-			Location:   o.AuthLoginFailPath,
-			FlashError: fmt.Sprintf("%s login cancelled or failed.", strings.Title(provider)),
-		}
+		return response.JSONResponse(ctx,w,r,true,fmt.Sprintf("%s login cancelled or failed.", strings.Title(provider)),nil)
 	}
 
 	cfg, ok := o.OAuth2Providers[provider]
@@ -205,22 +196,6 @@ func (o *OAuth2) oauthCallback(ctx *authapi.Context, w http.ResponseWriter, r *h
 	}
 
 	ctx.SessionStorer.Del(authapi.SessionOAuth2Params)
-
-	redirect := o.AuthLoginOKPath
-	query := make(url.Values)
-	for k, v := range values {
-		switch k {
-		case authapi.CookieRemember:
-		case authapi.FormValueRedirect:
-			redirect = v
-		default:
-			query.Set(k, v)
-		}
-	}
-
-	if len(query) > 0 {
-		redirect = fmt.Sprintf("%s?%s", redirect, query.Encode())
-	}
 
 	sf := fmt.Sprintf("Logged in successfully with %s.", strings.Title(provider))
 	return response.JSONResponse(ctx,w,r,false,sf,nil);

@@ -25,12 +25,12 @@ func init() {
 
 // Lock module
 type Lock struct {
-	*authapi.authapi
+	*authapi.Authapi
 }
 
 // Initialize the module
-func (l *Lock) Initialize(ab *authapi.authapi) error {
-	l.authapi = ab
+func (l *Lock) Initialize(ab *authapi.Authapi) error {
+	l.Authapi = ab
 	if l.Storer == nil && l.StoreMaker == nil {
 		return errors.New("lock: Need a Storer")
 	}

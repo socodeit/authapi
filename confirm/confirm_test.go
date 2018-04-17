@@ -60,7 +60,7 @@ func TestConfirm_Routes(t *testing.T) {
 func TestConfirm_Storage(t *testing.T) {
 	t.Parallel()
 
-	c := &Confirm{authapi: authapi.New()}
+	c := &Confirm{Authapi: authapi.New()}
 	storage := c.Storage()
 
 	if authapi.String != storage[StoreConfirmToken] {

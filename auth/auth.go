@@ -24,12 +24,12 @@ func init() {
 
 // Auth module
 type Auth struct {
-	*authapi.authapi
+	*authapi.Authapi
 }
 
 // Initialize module
-func (a *Auth) Initialize(ab *authapi.authapi) (err error) {
-	a.authapi = ab
+func (a *Auth) Initialize(ab *authapi.Authapi) (err error) {
+	a.Authapi = ab
 
 	if a.Storer == nil && a.StoreMaker == nil {
 		return errors.New("auth: Need a Storer")

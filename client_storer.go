@@ -3,7 +3,7 @@ package authapi
 import "net/http"
 
 const (
-	// SessionKey is the primarily used key by authapi.
+	// SessionKey is the primarily used key by Authapi.
 	SessionKey = "uid"
 	// SessionHalfAuthKey is used for sessions that have been authenticated by
 	// the remember module. This serves as a way to force full authentication
@@ -64,7 +64,7 @@ type CookieStoreMaker func(http.ResponseWriter, *http.Request) ClientStorer
 type SessionStoreMaker func(http.ResponseWriter, *http.Request) ClientStorer
 
 // FlashSuccess returns FlashSuccessKey from the session and removes it.
-func (a *authapi) FlashSuccess(w http.ResponseWriter, r *http.Request) string {
+func (a *Authapi) FlashSuccess(w http.ResponseWriter, r *http.Request) string {
 	storer := a.SessionStoreMaker(w, r)
 	msg, ok := storer.Get(FlashSuccessKey)
 	if ok {
@@ -75,7 +75,7 @@ func (a *authapi) FlashSuccess(w http.ResponseWriter, r *http.Request) string {
 }
 
 // FlashError returns FlashError from the session and removes it.
-func (a *authapi) FlashError(w http.ResponseWriter, r *http.Request) string {
+func (a *Authapi) FlashError(w http.ResponseWriter, r *http.Request) string {
 	storer := a.SessionStoreMaker(w, r)
 	msg, ok := storer.Get(FlashErrorKey)
 	if ok {

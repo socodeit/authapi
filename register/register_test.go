@@ -14,7 +14,6 @@ import (
 
 func setup() *Register {
 	ab := authapi.New()
-	ab.RegisterOKPath = "/regsuccess"
 	ab.XSRFName = "xsrf"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "xsrfvalue"
@@ -138,10 +137,6 @@ func TestRegisterPostSuccess(t *testing.T) {
 
 	if w.Code != http.StatusFound {
 		t.Error("It should have written a redirect:", w.Code)
-	}
-
-	if loc := w.Header().Get("Location"); loc != reg.RegisterOKPath {
-		t.Error("Redirected to the wrong location", loc)
 	}
 
 	user, err := reg.Storer.Get(email)

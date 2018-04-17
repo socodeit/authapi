@@ -4,15 +4,15 @@ import "reflect"
 
 var registeredModules = make(map[string]Modularizer)
 
-// Modularizer should be implemented by all the authapi modules.
+// Modularizer should be implemented by all the Authapi modules.
 type Modularizer interface {
-	Initialize(*authapi) error
+	Initialize(*Authapi) error
 	Routes() RouteTable
 	Storage() StorageOptions
 }
 
 // RegisterModule with the core providing all the necessary information to
-// integrate into authapi.
+// integrate into Authapi.
 func RegisterModule(name string, m Modularizer) {
 	registeredModules[name] = m
 }
@@ -33,7 +33,7 @@ func RegisteredModules() []string {
 // instance of the module type. The original value is copied, but not deep copied
 // so care should be taken to make sure most initialization happens inside the Initialize()
 // method of the module.
-func (a *authapi) loadModule(name string) error {
+func (a *Authapi) loadModule(name string) error {
 	module, ok := registeredModules[name]
 	if !ok {
 		panic("Could not find module: " + name)
@@ -60,7 +60,7 @@ func (a *authapi) loadModule(name string) error {
 }
 
 // LoadedModules returns a list of modules that are currently loaded.
-func (a *authapi) LoadedModules() []string {
+func (a *Authapi) LoadedModules() []string {
 	mods := make([]string, len(a.loadedModules))
 	i := 0
 	for k := range a.loadedModules {
@@ -72,7 +72,7 @@ func (a *authapi) LoadedModules() []string {
 }
 
 // IsLoaded checks if a specific module is loaded.
-func (a *authapi) IsLoaded(mod string) bool {
+func (a *Authapi) IsLoaded(mod string) bool {
 	_, ok := a.loadedModules[mod]
 	return ok
 }

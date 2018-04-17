@@ -19,7 +19,7 @@ const (
 type RegisterStorer interface {
 	authapi.Storer
 	// Create is the same as put, except it refers to a non-existent key.  If the key is
-	// found simply return authapi.ErrUserFound
+	// found simply return Authapi.ErrUserFound
 	Create(key string, attr authapi.Attributes) error
 }
 
@@ -29,12 +29,12 @@ func init() {
 
 // Register module.
 type Register struct {
-	*authapi.authapi
+	*authapi.Authapi
 }
 
 // Initialize the module.
-func (r *Register) Initialize(ab *authapi.authapi) (err error) {
-	r.authapi = ab
+func (r *Register) Initialize(ab *authapi.Authapi) (err error) {
+	r.Authapi = ab
 
 	if r.Storer != nil {
 		if _, ok := r.Storer.(RegisterStorer); !ok {

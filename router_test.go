@@ -20,11 +20,11 @@ type testRouterModule struct {
 	routes RouteTable
 }
 
-func (t testRouterModule) Initialize(ab *authapi) error { return nil }
-func (t testRouterModule) Routes() RouteTable            { return t.routes }
-func (t testRouterModule) Storage() StorageOptions       { return nil }
+func (t testRouterModule) Initialize(ab *Authapi) error { return nil }
+func (t testRouterModule) Routes() RouteTable           { return t.routes }
+func (t testRouterModule) Storage() StorageOptions      { return nil }
 
-func testRouterSetup() (*authapi, http.Handler, *bytes.Buffer) {
+func testRouterSetup() (*Authapi, http.Handler, *bytes.Buffer) {
 	ab := New()
 	logger := &bytes.Buffer{}
 	ab.LogWriter = logger

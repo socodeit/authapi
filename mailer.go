@@ -11,7 +11,7 @@ import (
 )
 
 // SendMail uses the currently configured mailer to deliver e-mails.
-func (a *authapi) SendMail(data Email) error {
+func (a *Authapi) SendMail(data Email) error {
 	return a.Mailer.Send(data)
 }
 

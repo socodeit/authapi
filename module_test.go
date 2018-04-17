@@ -28,9 +28,9 @@ func testHandler(ctx *Context, w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (t *testModule) Initialize(a *authapi) error { return nil }
-func (t *testModule) Routes() RouteTable           { return t.r }
-func (t *testModule) Storage() StorageOptions      { return t.s }
+func (t *testModule) Initialize(a *Authapi) error { return nil }
+func (t *testModule) Routes() RouteTable          { return t.r }
+func (t *testModule) Storage() StorageOptions     { return t.s }
 
 func TestRegister(t *testing.T) {
 	// RegisterModule called by init()

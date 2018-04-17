@@ -11,9 +11,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Config holds all the configuration for both authapi and it's modules.
+// Config holds all the configuration for both Authapi and it's modules.
 type Config struct {
-	// MountPath is the path to mount authapi's routes at (eg /auth).
+	// MountPath is the path to mount Authapi's routes at (eg /auth).
 	MountPath string
 	// ViewsPath is the path to search for overridden templates.
 	ViewsPath string
@@ -26,7 +26,7 @@ type Config struct {
 	BCryptCost int
 
 	// PrimaryID is the primary identifier of the user. Set to one of:
-	// authapi.StoreEmail, authapi.StoreUsername (StoreEmail is default)
+	// Authapi.StoreEmail, Authapi.StoreUsername (StoreEmail is default)
 	PrimaryID string
 
 	// Allow the user to be automatically signed in after confirm his account
@@ -74,11 +74,11 @@ type Config struct {
 	// LockDuration is how long an account is locked for.
 	LockDuration time.Duration
 
-	// EmailFrom is the email address authapi e-mails come from.
+	// EmailFrom is the email address Authapi e-mails come from.
 	EmailFrom string
-	// EmailFromName is the name used in the From: header of authapi emails.
+	// EmailFromName is the name used in the From: header of Authapi emails.
 	EmailFromName string
-	// EmailSubjectPrefix is used to add something to the front of the authapi
+	// EmailSubjectPrefix is used to add something to the front of the Authapi
 	// email subjects.
 	EmailSubjectPrefix string
 
@@ -87,7 +87,7 @@ type Config struct {
 	// XSRFMaker is a function that returns an xsrf token for the current non-POST request.
 	XSRFMaker XSRF
 
-	// Storer is the interface through which authapi accesses the web apps database.
+	// Storer is the interface through which Authapi accesses the web apps database.
 	Storer Storer
 	// StoreMaker is an alternative to defining Storer directly, which facilitates creating
 	// a Storer on demand from the current http request. Unless you have an exceedingly unusual
@@ -124,7 +124,7 @@ type Config struct {
 	// an expired request object, where relevant, calls to this function will never be spun off as
 	// goroutines.
 	LogWriteMaker LogWriteMaker
-	// Mailer is the mailer being used to send e-mails out. authapi defines two loggers for use
+	// Mailer is the mailer being used to send e-mails out. Authapi defines two loggers for use
 	// LogMailer and SMTPMailer, the default is a LogMailer to io.Discard.
 	Mailer Mailer
 	// MailMaker is an alternative to defining Mailer directly, which facilitates creating
@@ -149,8 +149,8 @@ func (c *Config) Defaults() {
 
 	c.PrimaryID = StoreEmail
 
-	c.LayoutHTMLEmail = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{template "authapi" .}}</body></html>`))
-	c.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "authapi" .}}`))
+	c.LayoutHTMLEmail = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{template "Authapi" .}}</body></html>`))
+	c.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "Authapi" .}}`))
 
 	c.RecoverTokenDuration = time.Duration(24) * time.Hour
 

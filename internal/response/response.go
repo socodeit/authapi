@@ -40,7 +40,7 @@ type Templates map[string]*template.Template
 // in a unique clone of layout.  All templates are expecting {{authapi}} handlebars
 // for parsing. It will check the override directory specified in the config, replacing any
 // templates as necessary.
-func LoadTemplates(ab *authapi.authapi, layout *template.Template, fpath string, files ...string) (Templates, error) {
+func LoadTemplates(ab *authapi.Authapi, layout *template.Template, fpath string, files ...string) (Templates, error) {
 	m := make(Templates)
 
 	funcMap := template.FuncMap{

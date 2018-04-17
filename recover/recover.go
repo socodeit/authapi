@@ -62,14 +62,14 @@ func init() {
 
 // Recover module
 type Recover struct {
-	*authapi.authapi
+	*authapi.Authapi
 	emailHTMLTemplates response.Templates
 	emailTextTemplates response.Templates
 }
 
 // Initialize module
-func (r *Recover) Initialize(ab *authapi.authapi) (err error) {
-	r.authapi = ab
+func (r *Recover) Initialize(ab *authapi.Authapi) (err error) {
+	r.Authapi = ab
 
 	if r.Storer != nil {
 		if _, ok := r.Storer.(RecoverStorer); !ok {
@@ -87,11 +87,11 @@ func (r *Recover) Initialize(ab *authapi.authapi) (err error) {
 		return errors.New("auth: XSRFMaker must be defined")
 	}
 
-	r.emailHTMLTemplates, err = response.LoadTemplates(r.authapi, r.LayoutHTMLEmail, r.ViewsPath, tplInitHTMLEmail)
+	r.emailHTMLTemplates, err = response.LoadTemplates(r.Authapi, r.LayoutHTMLEmail, r.ViewsPath, tplInitHTMLEmail)
 	if err != nil {
 		return err
 	}
-	r.emailTextTemplates, err = response.LoadTemplates(r.authapi, r.LayoutTextEmail, r.ViewsPath, tplInitTextEmail)
+	r.emailTextTemplates, err = response.LoadTemplates(r.Authapi, r.LayoutTextEmail, r.ViewsPath, tplInitTextEmail)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (r *Recover) completeHandlerFunc(ctx *authapi.Context, w http.ResponseWrite
 			return err
 		}
 
-		if r.authapi.AllowLoginAfterResetPassword {
+		if r.Authapi.AllowLoginAfterResetPassword {
 			ctx.SessionStorer.Put(authapi.SessionKey, primaryID)
 		}
 		return response.JSONResponse(ctx,w,req,false,"Password changed successfully.",nil)

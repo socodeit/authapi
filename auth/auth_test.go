@@ -33,7 +33,7 @@ func testSetup() (a *Auth, s *mocks.MockStorer) {
 	return a, s
 }
 
-func testRequest(ab *authapi.authapi, method string, postFormValues ...string) (*authapi.Context, *httptest.ResponseRecorder, *http.Request, authapi.ClientStorerErr) {
+func testRequest(ab *authapi.Authapi, method string, postFormValues ...string) (*authapi.Context, *httptest.ResponseRecorder, *http.Request, authapi.ClientStorerErr) {
 	sessionStorer := mocks.NewMockClientStorer()
 	ctx := ab.NewContext()
 	r := mocks.MockRequest(method, postFormValues...)
@@ -68,7 +68,7 @@ func TestAuth_loginHandlerFunc_GET(t *testing.T) {
 	t.Parallel()
 
 	a, _ := testSetup()
-	ctx, w, r, _ := testRequest(a.authapi, "GET")
+	ctx, w, r, _ := testRequest(a.Authapi, "GET")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -101,7 +101,7 @@ func TestAuth_loginHandlerFunc_POST_ReturnsErrorOnCallbackFailure(t *testing.T) 
 		return authapi.InterruptNone, errors.New("explode")
 	})
 
-	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ := testRequest(a.Authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err.Error() != "explode" {
 		t.Error("Unexpected error:", err)
@@ -119,7 +119,7 @@ func TestAuth_loginHandlerFunc_POST_RedirectsWhenInterrupted(t *testing.T) {
 		return authapi.InterruptAccountLocked, nil
 	})
 
-	ctx, w, r, sessionStore := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
+	ctx, w, r, sessionStore := testRequest(a.Authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -171,7 +171,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 	log := &bytes.Buffer{}
 	a.LogWriter = log
 
-	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1")
+	ctx, w, r, _ := testRequest(a.Authapi, "POST", "username", "john", "password", "1")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -186,7 +186,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 		t.Error("Should have rendered with error")
 	}
 
-	ctx, w, r, _ = testRequest(a.authapi, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ = testRequest(a.Authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -201,7 +201,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 		t.Error("Should have rendered with error")
 	}
 
-	ctx, w, r, _ = testRequest(a.authapi, "POST", "username", "jake", "password", "1")
+	ctx, w, r, _ = testRequest(a.Authapi, "POST", "username", "jake", "password", "1")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -223,7 +223,7 @@ func TestAuth_loginHandlerFunc_POST(t *testing.T) {
 	a, storer := testSetup()
 	storer.Users["john"] = authapi.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
 
-	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ := testRequest(a.Authapi, "POST", "username", "john", "password", "1234")
 	cb := mocks.NewMockAfterCallback()
 
 	a.Callbacks = authapi.NewCallbacks()
@@ -320,7 +320,7 @@ func TestAuth_logoutHandlerFunc_GET(t *testing.T) {
 
 	a.AuthLogoutOKPath = "/dashboard"
 
-	ctx, w, r, sessionStorer := testRequest(a.authapi, "GET")
+	ctx, w, r, sessionStorer := testRequest(a.Authapi, "GET")
 	sessionStorer.Put(authapi.SessionKey, "asdf")
 	sessionStorer.Put(authapi.SessionLastAction, "1234")
 

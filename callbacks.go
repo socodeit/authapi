@@ -61,7 +61,7 @@ type Callbacks struct {
 }
 
 // NewCallbacks creates a new set of before and after callbacks.
-// Called only by authapi internals and for testing.
+// Called only by Authapi internals and for testing.
 func NewCallbacks() *Callbacks {
 	return &Callbacks{
 		make(map[Event][]Before),

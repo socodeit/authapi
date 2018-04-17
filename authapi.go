@@ -1,5 +1,5 @@
 /*
-Package authapi is a modular authentication system for the web. It tries to
+Package Authapi is a modular authentication system for the web. It tries to
 remove as much boilerplate and "hard things" as possible so that each time you
 start a new web project in Go, you can plug it in, configure and be off to the
 races without having to think about how to store passwords or remember tokens.
@@ -17,8 +17,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// authapi contains a configuration and other details for running.
-type authapi struct {
+// Authapi contains a configuration and other details for running.
+type Authapi struct {
 	Config
 	Callbacks *Callbacks
 
@@ -27,10 +27,10 @@ type authapi struct {
 	mux              *http.ServeMux
 }
 
-// New makes a new instance of authapi with a default
+// New makes a new instance of Authapi with a default
 // configuration.
-func New() *authapi {
-	ab := &authapi{
+func New() *Authapi {
+	ab := &Authapi{
 		Callbacks:        NewCallbacks(),
 		loadedModules:    make(map[string]Modularizer),
 		ModuleAttributes: make(AttributeMeta),
@@ -39,9 +39,9 @@ func New() *authapi {
 	return ab
 }
 
-// Init authapi and the requested modules. modulesToLoad is left empty
+// Init Authapi and the requested modules. modulesToLoad is left empty
 // all registered modules will be loaded.
-func (a *authapi) Init(modulesToLoad ...string) error {
+func (a *Authapi) Init(modulesToLoad ...string) error {
 	if len(modulesToLoad) == 0 {
 		modulesToLoad = RegisteredModules()
 	}
@@ -63,11 +63,11 @@ func (a *authapi) Init(modulesToLoad ...string) error {
 }
 
 // CurrentUser retrieves the current user from the session and the database.
-func (a *authapi) CurrentUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (a *Authapi) CurrentUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return a.currentUser(a.InitContext(w, r), w, r)
 }
 
-func (a *authapi) currentUser(ctx *Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (a *Authapi) currentUser(ctx *Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	_, err := a.Callbacks.FireBefore(EventGetUserSession, ctx)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (a *authapi) currentUser(ctx *Context, w http.ResponseWriter, r *http.Reque
 
 // CurrentUserP retrieves the current user but panics if it's not available for
 // any reason.
-func (a *authapi) CurrentUserP(w http.ResponseWriter, r *http.Request) interface{} {
+func (a *Authapi) CurrentUserP(w http.ResponseWriter, r *http.Request) interface{} {
 	i, err := a.CurrentUser(w, r)
 	if err != nil {
 		panic(err.Error())
@@ -135,7 +135,7 @@ will be returned.
 The error returned is returned either from the updater if that produced an error
 or from the cleanup routines.
 */
-func (a *authapi) UpdatePassword(w http.ResponseWriter, r *http.Request,
+func (a *Authapi) UpdatePassword(w http.ResponseWriter, r *http.Request,
 	ptPassword string, user interface{}, updater func() error) error {
 
 	updatePwd := len(ptPassword) > 0
@@ -149,7 +149,7 @@ func (a *authapi) UpdatePassword(w http.ResponseWriter, r *http.Request,
 		val := reflect.ValueOf(user).Elem()
 		field := val.FieldByName("Password")
 		if !field.CanSet() {
-			return errors.New("authapi: UpdatePassword called without a modifyable user struct")
+			return errors.New("Authapi: UpdatePassword called without a modifyable user struct")
 		}
 		fieldPtr := field.Addr()
 

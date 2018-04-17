@@ -16,7 +16,7 @@ var (
 // need for context is a request's session store. It is not safe for use by
 // multiple goroutines.
 type Context struct {
-	*authapi
+	*Authapi
 
 	SessionStorer ClientStorerErr
 	CookieStorer  ClientStorerErr
@@ -27,13 +27,13 @@ type Context struct {
 }
 
 // NewContext is exported for testing modules.
-func (a *authapi) NewContext() *Context {
+func (a *Authapi) NewContext() *Context {
 	return &Context{
-		authapi: a,
+		Authapi: a,
 	}
 }
 
-func (a *authapi) InitContext(w http.ResponseWriter, r *http.Request) *Context {
+func (a *Authapi) InitContext(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := a.NewContext()
 
 	if ctx.StoreMaker != nil {

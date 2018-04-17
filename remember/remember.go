@@ -44,12 +44,12 @@ func init() {
 
 // Remember module
 type Remember struct {
-	*authapi.authapi
+	*authapi.Authapi
 }
 
 // Initialize module
-func (r *Remember) Initialize(ab *authapi.authapi) error {
-	r.authapi = ab
+func (r *Remember) Initialize(ab *authapi.Authapi) error {
+	r.Authapi = ab
 
 	if r.Storer != nil || r.OAuth2Storer != nil {
 		if _, ok := r.Storer.(RememberStorer); !ok {

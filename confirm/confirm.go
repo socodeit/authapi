@@ -46,14 +46,14 @@ func init() {
 
 // Confirm module
 type Confirm struct {
-	*authapi.authapi
+	*authapi.Authapi
 	emailHTMLTemplates response.Templates
 	emailTextTemplates response.Templates
 }
 
 // Initialize the module
-func (c *Confirm) Initialize(ab *authapi.authapi) (err error) {
-	c.authapi = ab
+func (c *Confirm) Initialize(ab *authapi.Authapi) (err error) {
+	c.Authapi = ab
 
 	var ok bool
 	storer, ok := c.Storer.(ConfirmStorer)
@@ -192,7 +192,7 @@ func (c *Confirm) confirmHandler(ctx *authapi.Context, w http.ResponseWriter, r 
 	if err := ctx.SaveUser(); err != nil {
 		return err
 	}
-	if c.authapi.AllowInsecureLoginAfterConfirm {
+	if c.Authapi.AllowInsecureLoginAfterConfirm {
 		key, err := ctx.User.StringErr(c.PrimaryID)
 		if err != nil {
 			return err

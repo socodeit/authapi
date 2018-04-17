@@ -24,8 +24,8 @@ API this must be handled for each provider separately. It is used to return two 
 specifically: UID (the ID according to the provider) and the Email address.
 The UID must be passed back or there will be an error as it is the means of identifying the
 user in the system, e-mail is optional but should be returned in systems using
-emailing. The keys authapi.StoreOAuth2UID and authapi.StoreEmail can be used to set
-these values in the authapi.Attributes map returned by the callback.
+emailing. The keys Authapi.StoreOAuth2UID and Authapi.StoreEmail can be used to set
+these values in the Authapi.Attributes map returned by the callback.
 
 In addition to the required values mentioned above any additional
 values that you wish to have in your user struct can be included here, such as the
