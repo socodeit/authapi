@@ -149,8 +149,8 @@ func (c *Config) Defaults() {
 
 	c.PrimaryID = StoreEmail
 
-	c.LayoutHTMLEmail = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{template "Authapi" .}}</body></html>`))
-	c.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "Authapi" .}}`))
+	c.LayoutHTMLEmail = template.Must(template.New("").Parse(`<!DOCTYPE html><html><body>{{.}}</body></html>`))
+	c.LayoutTextEmail = template.Must(template.New("").Parse(`{{.}}`))
 
 	c.RecoverTokenDuration = time.Duration(24) * time.Hour
 
