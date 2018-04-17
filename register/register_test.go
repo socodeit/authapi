@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 func setup() *Register {
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.RegisterOKPath = "/regsuccess"
 	ab.XSRFName = "xsrf"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
@@ -31,7 +31,7 @@ func setup() *Register {
 }
 
 func TestRegister(t *testing.T) {
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.Storer = mocks.NewMockStorer()
 	r := Register{}
 	if err := r.Initialize(ab); err != nil {
@@ -43,10 +43,10 @@ func TestRegister(t *testing.T) {
 	}
 
 	sto := r.Storage()
-	if sto[r.PrimaryID] != authboss.String {
+	if sto[r.PrimaryID] != authapi.String {
 		t.Error("Wanted primary ID to be a string.")
 	}
-	if sto[authboss.StorePassword] != authboss.String {
+	if sto[authapi.StorePassword] != authapi.String {
 		t.Error("Wanted password to be a string.")
 	}
 }
@@ -86,8 +86,8 @@ func TestRegisterPostValidationErrs(t *testing.T) {
 
 	email := "email@address.com"
 	vals.Set(reg.PrimaryID, email)
-	vals.Set(authboss.StorePassword, "pass")
-	vals.Set(authboss.ConfirmPrefix+authboss.StorePassword, "pass2")
+	vals.Set(authapi.StorePassword, "pass")
+	vals.Set(authapi.ConfirmPrefix+authapi.StorePassword, "pass2")
 
 	r, _ := http.NewRequest("POST", "/register", bytes.NewBufferString(vals.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -110,7 +110,7 @@ func TestRegisterPostValidationErrs(t *testing.T) {
 		t.Error("Confirm password should have an error:", str)
 	}
 
-	if _, err := reg.Storer.Get(email); err != authboss.ErrUserNotFound {
+	if _, err := reg.Storer.Get(email); err != authapi.ErrUserNotFound {
 		t.Error("The user should not have been saved.")
 	}
 }
@@ -124,8 +124,8 @@ func TestRegisterPostSuccess(t *testing.T) {
 
 	email := "email@address.com"
 	vals.Set(reg.PrimaryID, email)
-	vals.Set(authboss.StorePassword, "pass")
-	vals.Set(authboss.ConfirmPrefix+authboss.StorePassword, "pass")
+	vals.Set(authapi.StorePassword, "pass")
+	vals.Set(authapi.ConfirmPrefix+authapi.StorePassword, "pass")
 
 	r, _ := http.NewRequest("POST", "/register", bytes.NewBufferString(vals.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -145,18 +145,18 @@ func TestRegisterPostSuccess(t *testing.T) {
 	}
 
 	user, err := reg.Storer.Get(email)
-	if err == authboss.ErrUserNotFound {
+	if err == authapi.ErrUserNotFound {
 		t.Error("The user have been saved.")
 	}
 
-	attrs := authboss.Unbind(user)
+	attrs := authapi.Unbind(user)
 	if e, err := attrs.StringErr(reg.PrimaryID); err != nil {
 		t.Error(err)
 	} else if e != email {
 		t.Errorf("Email was not set properly, want: %s, got: %s", email, e)
 	}
 
-	if p, err := attrs.StringErr(authboss.StorePassword); err != nil {
+	if p, err := attrs.StringErr(authapi.StorePassword); err != nil {
 		t.Error(err)
 	} else if p == "pass" {
 		t.Error("Password was not hashed.")

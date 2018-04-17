@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 )
 
 // SendMail uses the currently configured mailer to deliver e-mails.
-func (a *Authboss) SendMail(data Email) error {
+func (a *authapi) SendMail(data Email) error {
 	return a.Mailer.Send(data)
 }
 

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/socodeit/authboss"
+	"github.com/socodeit/authapi"
 )
 
-// MockUser represents all possible fields a authboss User may have
+// MockUser represents all possible fields a authapi User may have
 type MockUser struct {
 	Username           string
 	Email              string
@@ -29,9 +29,9 @@ type MockUser struct {
 	OauthExpiry        time.Time
 }
 
-// MockStorer should be valid for any module storer defined in authboss.
+// MockStorer should be valid for any module storer defined in authapi.
 type MockStorer struct {
-	Users          map[string]authboss.Attributes
+	Users          map[string]authapi.Attributes
 	Tokens         map[string][]string
 	CreateErr      string
 	PutErr         string
@@ -46,13 +46,13 @@ type MockStorer struct {
 // NewMockStorer constructor
 func NewMockStorer() *MockStorer {
 	return &MockStorer{
-		Users:  make(map[string]authboss.Attributes),
+		Users:  make(map[string]authapi.Attributes),
 		Tokens: make(map[string][]string),
 	}
 }
 
 // Create a new user
-func (m *MockStorer) Create(key string, attr authboss.Attributes) error {
+func (m *MockStorer) Create(key string, attr authapi.Attributes) error {
 	if len(m.CreateErr) > 0 {
 		return errors.New(m.CreateErr)
 	}
@@ -62,7 +62,7 @@ func (m *MockStorer) Create(key string, attr authboss.Attributes) error {
 }
 
 // Put updates to a user
-func (m *MockStorer) Put(key string, attr authboss.Attributes) error {
+func (m *MockStorer) Put(key string, attr authapi.Attributes) error {
 	if len(m.PutErr) > 0 {
 		return errors.New(m.PutErr)
 	}
@@ -85,7 +85,7 @@ func (m *MockStorer) Get(key string) (result interface{}, err error) {
 
 	userAttrs, ok := m.Users[key]
 	if !ok {
-		return nil, authboss.ErrUserNotFound
+		return nil, authapi.ErrUserNotFound
 	}
 
 	u := &MockUser{}
@@ -97,7 +97,7 @@ func (m *MockStorer) Get(key string) (result interface{}, err error) {
 }
 
 // PutOAuth user
-func (m *MockStorer) PutOAuth(uid, provider string, attr authboss.Attributes) error {
+func (m *MockStorer) PutOAuth(uid, provider string, attr authapi.Attributes) error {
 	if len(m.PutErr) > 0 {
 		return errors.New(m.PutErr)
 	}
@@ -120,7 +120,7 @@ func (m *MockStorer) GetOAuth(uid, provider string) (result interface{}, err err
 
 	userAttrs, ok := m.Users[uid+provider]
 	if !ok {
-		return nil, authboss.ErrUserNotFound
+		return nil, authapi.ErrUserNotFound
 	}
 
 	u := &MockUser{}
@@ -166,7 +166,7 @@ func (m *MockStorer) UseToken(givenKey, token string) (err error) {
 		}
 	}
 
-	return authboss.ErrTokenNotFound
+	return authapi.ErrTokenNotFound
 }
 
 // RecoverUser by the token.
@@ -187,7 +187,7 @@ func (m *MockStorer) RecoverUser(token string) (result interface{}, err error) {
 		}
 	}
 
-	return nil, authboss.ErrUserNotFound
+	return nil, authapi.ErrUserNotFound
 }
 
 // ConfirmUser via their token
@@ -208,19 +208,19 @@ func (m *MockStorer) ConfirmUser(confirmToken string) (result interface{}, err e
 		}
 	}
 
-	return nil, authboss.ErrUserNotFound
+	return nil, authapi.ErrUserNotFound
 }
 
 // MockFailStorer is used for testing module initialize functions that recover more than the base storer
 type MockFailStorer struct{}
 
 // Create fails
-func (_ MockFailStorer) Create(_ string, _ authboss.Attributes) error {
+func (_ MockFailStorer) Create(_ string, _ authapi.Attributes) error {
 	return errors.New("fail storer: create")
 }
 
 // Put fails
-func (_ MockFailStorer) Put(_ string, _ authboss.Attributes) error {
+func (_ MockFailStorer) Put(_ string, _ authapi.Attributes) error {
 	return errors.New("fail storer: put")
 }
 
@@ -263,12 +263,12 @@ func (m *MockClientStorer) Get(key string) (string, bool) {
 // GetErr gets a key's value or err if not exist
 func (m *MockClientStorer) GetErr(key string) (string, error) {
 	if m.GetShouldFail {
-		return "", authboss.ClientDataErr{Name: key}
+		return "", authapi.ClientDataErr{Name: key}
 	}
 
 	v, ok := m.Values[key]
 	if !ok {
-		return v, authboss.ClientDataErr{Name: key}
+		return v, authapi.ClientDataErr{Name: key}
 	}
 	return v, nil
 }
@@ -311,7 +311,7 @@ func MockRequest(method string, postKeyValues ...string) *http.Request {
 
 // MockMailer helps simplify mailer testing by storing the last sent email
 type MockMailer struct {
-	Last    authboss.Email
+	Last    authapi.Email
 	SendErr string
 }
 
@@ -321,7 +321,7 @@ func NewMockMailer() *MockMailer {
 }
 
 // Send an e-mail
-func (m *MockMailer) Send(email authboss.Email) error {
+func (m *MockMailer) Send(email authapi.Email) error {
 	if len(m.SendErr) > 0 {
 		return errors.New(m.SendErr)
 	}
@@ -333,14 +333,14 @@ func (m *MockMailer) Send(email authboss.Email) error {
 // MockAfterCallback is a callback that knows if it was called
 type MockAfterCallback struct {
 	HasBeenCalled bool
-	Fn            authboss.After
+	Fn            authapi.After
 }
 
 // NewMockAfterCallback constructs a new mockaftercallback.
 func NewMockAfterCallback() *MockAfterCallback {
 	m := MockAfterCallback{}
 
-	m.Fn = func(_ *authboss.Context) error {
+	m.Fn = func(_ *authapi.Context) error {
 		m.HasBeenCalled = true
 		return nil
 	}

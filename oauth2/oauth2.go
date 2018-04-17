@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"golang.org/x/oauth2"
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/response"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/response"
 )
 
 var (
@@ -23,16 +23,16 @@ var (
 
 // OAuth2 module
 type OAuth2 struct {
-	*authboss.Authboss
+	*authapi.authapi
 }
 
 func init() {
-	authboss.RegisterModule("oauth2", &OAuth2{})
+	authapi.RegisterModule("oauth2", &OAuth2{})
 }
 
 // Initialize module
-func (o *OAuth2) Initialize(ab *authboss.Authboss) error {
-	o.Authboss = ab
+func (o *OAuth2) Initialize(ab *authapi.authapi) error {
+	o.authapi = ab
 	if o.OAuth2Storer == nil && o.OAuth2StoreMaker == nil {
 		return errors.New("oauth2: need an OAuth2Storer")
 	}
@@ -40,8 +40,8 @@ func (o *OAuth2) Initialize(ab *authboss.Authboss) error {
 }
 
 // Routes for module
-func (o *OAuth2) Routes() authboss.RouteTable {
-	routes := make(authboss.RouteTable)
+func (o *OAuth2) Routes() authapi.RouteTable {
+	routes := make(authapi.RouteTable)
 
 	for prov, cfg := range o.OAuth2Providers {
 		prov = strings.ToLower(prov)
@@ -65,18 +65,18 @@ func (o *OAuth2) Routes() authboss.RouteTable {
 }
 
 // Storage requirements
-func (o *OAuth2) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		authboss.StoreEmail:          authboss.String,
-		authboss.StoreOAuth2UID:      authboss.String,
-		authboss.StoreOAuth2Provider: authboss.String,
-		authboss.StoreOAuth2Token:    authboss.String,
-		authboss.StoreOAuth2Refresh:  authboss.String,
-		authboss.StoreOAuth2Expiry:   authboss.DateTime,
+func (o *OAuth2) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		authapi.StoreEmail:          authapi.String,
+		authapi.StoreOAuth2UID:      authapi.String,
+		authapi.StoreOAuth2Provider: authapi.String,
+		authapi.StoreOAuth2Token:    authapi.String,
+		authapi.StoreOAuth2Refresh:  authapi.String,
+		authapi.StoreOAuth2Expiry:   authapi.DateTime,
 	}
 }
 
-func (o *OAuth2) oauthInit(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (o *OAuth2) oauthInit(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	provider := strings.ToLower(filepath.Base(r.URL.Path))
 	cfg, ok := o.OAuth2Providers[provider]
 	if !ok {
@@ -90,7 +90,7 @@ func (o *OAuth2) oauthInit(ctx *authboss.Context, w http.ResponseWriter, r *http
 	}
 
 	state := base64.URLEncoding.EncodeToString(random)
-	ctx.SessionStorer.Put(authboss.SessionOAuth2State, state)
+	ctx.SessionStorer.Put(authapi.SessionOAuth2State, state)
 
 	passAlongs := make(map[string]string)
 	for k, vals := range r.URL.Query() {
@@ -104,9 +104,9 @@ func (o *OAuth2) oauthInit(ctx *authboss.Context, w http.ResponseWriter, r *http
 		if err != nil {
 			return err
 		}
-		ctx.SessionStorer.Put(authboss.SessionOAuth2Params, string(str))
+		ctx.SessionStorer.Put(authapi.SessionOAuth2Params, string(str))
 	} else {
-		ctx.SessionStorer.Del(authboss.SessionOAuth2Params)
+		ctx.SessionStorer.Del(authapi.SessionOAuth2Params)
 	}
 
 	url := cfg.OAuth2Config.AuthCodeURL(state)
@@ -123,16 +123,16 @@ func (o *OAuth2) oauthInit(ctx *authboss.Context, w http.ResponseWriter, r *http
 // for testing
 var exchanger = (*oauth2.Config).Exchange
 
-func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (o *OAuth2) oauthCallback(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	provider := strings.ToLower(filepath.Base(r.URL.Path))
 
-	sessState, err := ctx.SessionStorer.GetErr(authboss.SessionOAuth2State)
-	ctx.SessionStorer.Del(authboss.SessionOAuth2State)
+	sessState, err := ctx.SessionStorer.GetErr(authapi.SessionOAuth2State)
+	ctx.SessionStorer.Del(authapi.SessionOAuth2State)
 	if err != nil {
 		return err
 	}
 
-	sessValues, ok := ctx.SessionStorer.Get(authboss.SessionOAuth2Params)
+	sessValues, ok := ctx.SessionStorer.Get(authapi.SessionOAuth2Params)
 	// Don't delete this value from session immediately, callbacks use this too
 	var values map[string]string
 	if ok {
@@ -143,11 +143,11 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 
 	hasErr := r.FormValue("error")
 	if len(hasErr) > 0 {
-		if err := o.Callbacks.FireAfter(authboss.EventOAuthFail, ctx); err != nil {
+		if err := o.Callbacks.FireAfter(authapi.EventOAuthFail, ctx); err != nil {
 			return err
 		}
 
-		return authboss.ErrAndRedirect{
+		return authapi.ErrAndRedirect{
 			Err:        errors.New(r.FormValue("error_reason")),
 			Location:   o.AuthLoginFailPath,
 			FlashError: fmt.Sprintf("%s login cancelled or failed.", strings.Title(provider)),
@@ -160,7 +160,7 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 	}
 
 	// Ensure request is genuine
-	state := r.FormValue(authboss.FormValueOAuth2State)
+	state := r.FormValue(authapi.FormValueOAuth2State)
 	splState := strings.Split(state, ";")
 	if len(splState) == 0 || splState[0] != sessState {
 		return errOAuthStateValidation
@@ -179,17 +179,17 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 	}
 
 	// OAuth2UID is required.
-	uid, err := user.StringErr(authboss.StoreOAuth2UID)
+	uid, err := user.StringErr(authapi.StoreOAuth2UID)
 	if err != nil {
 		return err
 	}
 
-	user[authboss.StoreOAuth2UID] = uid
-	user[authboss.StoreOAuth2Provider] = provider
-	user[authboss.StoreOAuth2Expiry] = token.Expiry
-	user[authboss.StoreOAuth2Token] = token.AccessToken
+	user[authapi.StoreOAuth2UID] = uid
+	user[authapi.StoreOAuth2Provider] = provider
+	user[authapi.StoreOAuth2Expiry] = token.Expiry
+	user[authapi.StoreOAuth2Token] = token.AccessToken
 	if len(token.RefreshToken) != 0 {
-		user[authboss.StoreOAuth2Refresh] = token.RefreshToken
+		user[authapi.StoreOAuth2Refresh] = token.RefreshToken
 	}
 
 	if err = ctx.OAuth2Storer.PutOAuth(uid, provider, user); err != nil {
@@ -197,21 +197,21 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 	}
 
 	// Fully log user in
-	ctx.SessionStorer.Put(authboss.SessionKey, fmt.Sprintf("%s;%s", uid, provider))
-	ctx.SessionStorer.Del(authboss.SessionHalfAuthKey)
+	ctx.SessionStorer.Put(authapi.SessionKey, fmt.Sprintf("%s;%s", uid, provider))
+	ctx.SessionStorer.Del(authapi.SessionHalfAuthKey)
 
-	if err = o.Callbacks.FireAfter(authboss.EventOAuth, ctx); err != nil {
+	if err = o.Callbacks.FireAfter(authapi.EventOAuth, ctx); err != nil {
 		return nil
 	}
 
-	ctx.SessionStorer.Del(authboss.SessionOAuth2Params)
+	ctx.SessionStorer.Del(authapi.SessionOAuth2Params)
 
 	redirect := o.AuthLoginOKPath
 	query := make(url.Values)
 	for k, v := range values {
 		switch k {
-		case authboss.CookieRemember:
-		case authboss.FormValueRedirect:
+		case authapi.CookieRemember:
+		case authapi.FormValueRedirect:
 			redirect = v
 		default:
 			query.Set(k, v)
@@ -226,12 +226,12 @@ func (o *OAuth2) oauthCallback(ctx *authboss.Context, w http.ResponseWriter, r *
 	return response.JSONResponse(ctx,w,r,false,sf,nil);
 }
 
-func (o *OAuth2) logout(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (o *OAuth2) logout(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case "GET":
-		ctx.SessionStorer.Del(authboss.SessionKey)
-		ctx.CookieStorer.Del(authboss.CookieRemember)
-		ctx.SessionStorer.Del(authboss.SessionLastAction)
+		ctx.SessionStorer.Del(authapi.SessionKey)
+		ctx.CookieStorer.Del(authapi.CookieRemember)
+		ctx.SessionStorer.Del(authapi.SessionLastAction)
 
 		return response.JSONResponse(ctx,w,r,false,"Logged out successfully.",nil)
 	default:

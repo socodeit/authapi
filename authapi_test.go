@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"database/sql"
@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestAuthBossInit(t *testing.T) {
+func TestauthapiInit(t *testing.T) {
 	t.Parallel()
 
 	ab := New()
@@ -20,7 +20,7 @@ func TestAuthBossInit(t *testing.T) {
 	}
 }
 
-func TestAuthBossCurrentUser(t *testing.T) {
+func TestauthapiCurrentUser(t *testing.T) {
 	t.Parallel()
 
 	ab := New()
@@ -48,7 +48,7 @@ func TestAuthBossCurrentUser(t *testing.T) {
 	}
 }
 
-func TestAuthBossCurrentUserCallbacks(t *testing.T) {
+func TestauthapiCurrentUserCallbacks(t *testing.T) {
 	t.Parallel()
 
 	ab := New()
@@ -94,7 +94,7 @@ func TestAuthBossCurrentUserCallbacks(t *testing.T) {
 	}
 }
 
-func TestAuthbossUpdatePassword(t *testing.T) {
+func TestauthapiUpdatePassword(t *testing.T) {
 	t.Parallel()
 
 	ab := New()
@@ -163,7 +163,7 @@ func TestAuthbossUpdatePassword(t *testing.T) {
 	}
 }
 
-func TestAuthbossUpdatePasswordFail(t *testing.T) {
+func TestauthapiUpdatePasswordFail(t *testing.T) {
 	t.Parallel()
 
 	ab := New()

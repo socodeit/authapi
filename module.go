@@ -1,18 +1,18 @@
-package authboss
+package authapi
 
 import "reflect"
 
 var registeredModules = make(map[string]Modularizer)
 
-// Modularizer should be implemented by all the authboss modules.
+// Modularizer should be implemented by all the authapi modules.
 type Modularizer interface {
-	Initialize(*Authboss) error
+	Initialize(*authapi) error
 	Routes() RouteTable
 	Storage() StorageOptions
 }
 
 // RegisterModule with the core providing all the necessary information to
-// integrate into authboss.
+// integrate into authapi.
 func RegisterModule(name string, m Modularizer) {
 	registeredModules[name] = m
 }
@@ -33,7 +33,7 @@ func RegisteredModules() []string {
 // instance of the module type. The original value is copied, but not deep copied
 // so care should be taken to make sure most initialization happens inside the Initialize()
 // method of the module.
-func (a *Authboss) loadModule(name string) error {
+func (a *authapi) loadModule(name string) error {
 	module, ok := registeredModules[name]
 	if !ok {
 		panic("Could not find module: " + name)
@@ -60,7 +60,7 @@ func (a *Authboss) loadModule(name string) error {
 }
 
 // LoadedModules returns a list of modules that are currently loaded.
-func (a *Authboss) LoadedModules() []string {
+func (a *authapi) LoadedModules() []string {
 	mods := make([]string, len(a.loadedModules))
 	i := 0
 	for k := range a.loadedModules {
@@ -72,7 +72,7 @@ func (a *Authboss) LoadedModules() []string {
 }
 
 // IsLoaded checks if a specific module is loaded.
-func (a *Authboss) IsLoaded(mod string) bool {
+func (a *authapi) IsLoaded(mod string) bool {
 	_, ok := a.loadedModules[mod]
 	return ok
 }

@@ -1,4 +1,4 @@
-// Package response is responsible for loading and rendering authboss templates.
+// Package response is responsible for loading and rendering authapi templates.
 package response
 
 //go:generate go-bindata -pkg=response -prefix=templates templates
@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/socodeit/authboss"
+	"github.com/socodeit/authapi"
 	"encoding/json"
 	"errors"
 )
@@ -37,10 +37,10 @@ type POSTJSONResp struct{
 type Templates map[string]*template.Template
 
 // LoadTemplates parses all specified files located in fpath. Each template is wrapped
-// in a unique clone of layout.  All templates are expecting {{authboss}} handlebars
+// in a unique clone of layout.  All templates are expecting {{authapi}} handlebars
 // for parsing. It will check the override directory specified in the config, replacing any
 // templates as necessary.
-func LoadTemplates(ab *authboss.Authboss, layout *template.Template, fpath string, files ...string) (Templates, error) {
+func LoadTemplates(ab *authapi.authapi, layout *template.Template, fpath string, files ...string) (Templates, error) {
 	m := make(Templates)
 
 	funcMap := template.FuncMap{
@@ -69,7 +69,7 @@ func LoadTemplates(ab *authboss.Authboss, layout *template.Template, fpath strin
 			return nil, err
 		}
 
-		_, err = clone.New("authboss").Funcs(funcMap).Parse(string(b))
+		_, err = clone.New("authapi").Funcs(funcMap).Parse(string(b))
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +80,7 @@ func LoadTemplates(ab *authboss.Authboss, layout *template.Template, fpath strin
 	return m, nil
 }
 
-func JSONResponse(ctx *authboss.Context, w http.ResponseWriter, r *http.Request, error bool,message interface{}, params []string) error {
+func JSONResponse(ctx *authapi.Context, w http.ResponseWriter, r *http.Request, error bool,message interface{}, params []string) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if params==nil {
@@ -99,26 +99,26 @@ func JSONResponse(ctx *authboss.Context, w http.ResponseWriter, r *http.Request,
 }
 
 // RenderEmail renders the html and plaintext views for an email and sends it
-func Email(mailer authboss.Mailer, email authboss.Email, htmlTpls Templates, nameHTML string, textTpls Templates, namePlain string, data interface{}) error {
+func Email(mailer authapi.Mailer, email authapi.Email, htmlTpls Templates, nameHTML string, textTpls Templates, namePlain string, data interface{}) error {
 	tplHTML, ok := htmlTpls[nameHTML]
 	if !ok {
-		return authboss.RenderErr{TemplateName: tplHTML.Name(), Data: data, Err: ErrTemplateNotFound}
+		return authapi.RenderErr{TemplateName: tplHTML.Name(), Data: data, Err: ErrTemplateNotFound}
 	}
 
 	tplPlain, ok := textTpls[namePlain]
 	if !ok {
-		return authboss.RenderErr{TemplateName: tplPlain.Name(), Data: data, Err: ErrTemplateNotFound}
+		return authapi.RenderErr{TemplateName: tplPlain.Name(), Data: data, Err: ErrTemplateNotFound}
 	}
 
 	htmlBuffer := &bytes.Buffer{}
 	if err := tplHTML.ExecuteTemplate(htmlBuffer, tplHTML.Name(), data); err != nil {
-		return authboss.RenderErr{TemplateName: tplHTML.Name(), Data: data, Err: err}
+		return authapi.RenderErr{TemplateName: tplHTML.Name(), Data: data, Err: err}
 	}
 	email.HTMLBody = htmlBuffer.String()
 
 	plainBuffer := &bytes.Buffer{}
 	if err := tplPlain.ExecuteTemplate(plainBuffer, tplPlain.Name(), data); err != nil {
-		return authboss.RenderErr{TemplateName: tplPlain.Name(), Data: data, Err: err}
+		return authapi.RenderErr{TemplateName: tplPlain.Name(), Data: data, Err: err}
 	}
 	email.TextBody = plainBuffer.String()
 

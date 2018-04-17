@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/socodeit/authboss"
+	"github.com/socodeit/authapi"
 )
 
 const (
@@ -26,7 +26,7 @@ var (
 // the tokens should be stored in a separate table since they require a 1-n
 // with the user for each device the user wishes to remain logged in on.
 //
-// Remember storer will look at both authboss's configured Storer and OAuth2Storer
+// Remember storer will look at both authapi's configured Storer and OAuth2Storer
 // for compatibility.
 type RememberStorer interface {
 	// AddToken saves a new token for the key.
@@ -39,17 +39,17 @@ type RememberStorer interface {
 }
 
 func init() {
-	authboss.RegisterModule("remember", &Remember{})
+	authapi.RegisterModule("remember", &Remember{})
 }
 
 // Remember module
 type Remember struct {
-	*authboss.Authboss
+	*authapi.authapi
 }
 
 // Initialize module
-func (r *Remember) Initialize(ab *authboss.Authboss) error {
-	r.Authboss = ab
+func (r *Remember) Initialize(ab *authapi.authapi) error {
+	r.authapi = ab
 
 	if r.Storer != nil || r.OAuth2Storer != nil {
 		if _, ok := r.Storer.(RememberStorer); !ok {
@@ -61,29 +61,29 @@ func (r *Remember) Initialize(ab *authboss.Authboss) error {
 		return errors.New("remember: Need a RememberStorer")
 	}
 
-	r.Callbacks.Before(authboss.EventGetUserSession, r.auth)
-	r.Callbacks.After(authboss.EventAuth, r.afterAuth)
-	r.Callbacks.After(authboss.EventOAuth, r.afterOAuth)
-	r.Callbacks.After(authboss.EventPasswordReset, r.afterPassword)
+	r.Callbacks.Before(authapi.EventGetUserSession, r.auth)
+	r.Callbacks.After(authapi.EventAuth, r.afterAuth)
+	r.Callbacks.After(authapi.EventOAuth, r.afterOAuth)
+	r.Callbacks.After(authapi.EventPasswordReset, r.afterPassword)
 
 	return nil
 }
 
 // Routes for module
-func (r *Remember) Routes() authboss.RouteTable {
+func (r *Remember) Routes() authapi.RouteTable {
 	return nil
 }
 
 // Storage requirements
-func (r *Remember) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		r.PrimaryID: authboss.String,
+func (r *Remember) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		r.PrimaryID: authapi.String,
 	}
 }
 
 // afterAuth is called after authentication is successful.
-func (r *Remember) afterAuth(ctx *authboss.Context) error {
-	if val := ctx.Values[authboss.CookieRemember]; val != "true" {
+func (r *Remember) afterAuth(ctx *authapi.Context) error {
+	if val := ctx.Values[authapi.CookieRemember]; val != "true" {
 		return nil
 	}
 
@@ -106,8 +106,8 @@ func (r *Remember) afterAuth(ctx *authboss.Context) error {
 // afterOAuth is called after oauth authentication is successful.
 // Has to pander to horrible state variable packing to figure out if we want
 // to be remembered.
-func (r *Remember) afterOAuth(ctx *authboss.Context) error {
-	sessValues, ok := ctx.SessionStorer.Get(authboss.SessionOAuth2Params)
+func (r *Remember) afterOAuth(ctx *authapi.Context) error {
+	sessValues, ok := ctx.SessionStorer.Get(authapi.SessionOAuth2Params)
 	if !ok {
 		return nil
 	}
@@ -117,7 +117,7 @@ func (r *Remember) afterOAuth(ctx *authboss.Context) error {
 		return err
 	}
 
-	val, ok := values[authboss.CookieRemember]
+	val, ok := values[authapi.CookieRemember]
 	should := ok && val == "true"
 
 	if !should {
@@ -128,11 +128,11 @@ func (r *Remember) afterOAuth(ctx *authboss.Context) error {
 		return errUserMissing
 	}
 
-	uid, err := ctx.User.StringErr(authboss.StoreOAuth2Provider)
+	uid, err := ctx.User.StringErr(authapi.StoreOAuth2Provider)
 	if err != nil {
 		return err
 	}
-	provider, err := ctx.User.StringErr(authboss.StoreOAuth2Provider)
+	provider, err := ctx.User.StringErr(authapi.StoreOAuth2Provider)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (r *Remember) afterOAuth(ctx *authboss.Context) error {
 }
 
 // afterPassword is called after the password has been reset.
-func (r *Remember) afterPassword(ctx *authboss.Context) error {
+func (r *Remember) afterPassword(ctx *authapi.Context) error {
 	if ctx.User == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (r *Remember) afterPassword(ctx *authboss.Context) error {
 		return nil
 	}
 
-	ctx.CookieStorer.Del(authboss.CookieRemember)
+	ctx.CookieStorer.Del(authapi.CookieRemember)
 
 	var storer RememberStorer
 	if storer, ok = ctx.Storer.(RememberStorer); !ok {
@@ -170,7 +170,7 @@ func (r *Remember) afterPassword(ctx *authboss.Context) error {
 // new generates a new remember token and stores it in the configured RememberStorer.
 // The return value is a token that should only be given to a user if the delivery
 // method is secure which means at least signed if not encrypted.
-func (r *Remember) new(cstorer authboss.ClientStorer, storageKey string) (string, error) {
+func (r *Remember) new(cstorer authapi.ClientStorer, storageKey string) (string, error) {
 	token := make([]byte, nRandBytes+len(storageKey)+1)
 	copy(token, []byte(storageKey))
 	token[len(storageKey)] = ';'
@@ -195,7 +195,7 @@ func (r *Remember) new(cstorer authboss.ClientStorer, storageKey string) (string
 	}
 
 	// Write the finalToken to the cookie
-	cstorer.Put(authboss.CookieRemember, finalToken)
+	cstorer.Put(authapi.CookieRemember, finalToken)
 
 	return finalToken, nil
 }
@@ -203,24 +203,24 @@ func (r *Remember) new(cstorer authboss.ClientStorer, storageKey string) (string
 // auth takes a token that was given to a user and checks to see if something
 // is matching in the database. If something is found the old token is deleted
 // and a new one should be generated.
-func (r *Remember) auth(ctx *authboss.Context) (authboss.Interrupt, error) {
-	if val, ok := ctx.SessionStorer.Get(authboss.SessionKey); ok || len(val) > 0 {
-		return authboss.InterruptNone, nil
+func (r *Remember) auth(ctx *authapi.Context) (authapi.Interrupt, error) {
+	if val, ok := ctx.SessionStorer.Get(authapi.SessionKey); ok || len(val) > 0 {
+		return authapi.InterruptNone, nil
 	}
 
-	finalToken, ok := ctx.CookieStorer.Get(authboss.CookieRemember)
+	finalToken, ok := ctx.CookieStorer.Get(authapi.CookieRemember)
 	if !ok {
-		return authboss.InterruptNone, nil
+		return authapi.InterruptNone, nil
 	}
 
 	token, err := base64.URLEncoding.DecodeString(finalToken)
 	if err != nil {
-		return authboss.InterruptNone, err
+		return authapi.InterruptNone, err
 	}
 
 	index := bytes.IndexByte(token, ';')
 	if index < 0 {
-		return authboss.InterruptNone, errors.New("remember: Invalid remember token")
+		return authapi.InterruptNone, errors.New("remember: Invalid remember token")
 	}
 
 	// Get the key.
@@ -235,21 +235,21 @@ func (r *Remember) auth(ctx *authboss.Context) (authboss.Interrupt, error) {
 	}
 
 	err = storer.UseToken(givenKey, base64.StdEncoding.EncodeToString(sum[:]))
-	if err == authboss.ErrTokenNotFound {
-		return authboss.InterruptNone, nil
+	if err == authapi.ErrTokenNotFound {
+		return authapi.InterruptNone, nil
 	} else if err != nil {
-		return authboss.InterruptNone, err
+		return authapi.InterruptNone, err
 	}
 
 	_, err = r.new(ctx.CookieStorer, givenKey)
 	if err != nil {
-		return authboss.InterruptNone, err
+		return authapi.InterruptNone, err
 	}
 
 	// Ensure a half-auth.
-	ctx.SessionStorer.Put(authboss.SessionHalfAuthKey, "true")
+	ctx.SessionStorer.Put(authapi.SessionHalfAuthKey, "true")
 	// Log the user in.
-	ctx.SessionStorer.Put(authboss.SessionKey, givenKey)
+	ctx.SessionStorer.Put(authapi.SessionKey, givenKey)
 
-	return authboss.InterruptNone, nil
+	return authapi.InterruptNone, nil
 }

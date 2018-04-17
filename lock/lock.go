@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/socodeit/authboss"
+	"github.com/socodeit/authapi"
 )
 
 // Storage key constants
@@ -20,63 +20,63 @@ var (
 )
 
 func init() {
-	authboss.RegisterModule("lock", &Lock{})
+	authapi.RegisterModule("lock", &Lock{})
 }
 
 // Lock module
 type Lock struct {
-	*authboss.Authboss
+	*authapi.authapi
 }
 
 // Initialize the module
-func (l *Lock) Initialize(ab *authboss.Authboss) error {
-	l.Authboss = ab
+func (l *Lock) Initialize(ab *authapi.authapi) error {
+	l.authapi = ab
 	if l.Storer == nil && l.StoreMaker == nil {
 		return errors.New("lock: Need a Storer")
 	}
 
 	// Events
-	l.Callbacks.After(authboss.EventGetUser, func(ctx *authboss.Context) error {
+	l.Callbacks.After(authapi.EventGetUser, func(ctx *authapi.Context) error {
 		_, err := l.beforeAuth(ctx)
 		return err
 	})
-	l.Callbacks.Before(authboss.EventAuth, l.beforeAuth)
-	l.Callbacks.After(authboss.EventAuth, l.afterAuth)
-	l.Callbacks.After(authboss.EventAuthFail, l.afterAuthFail)
+	l.Callbacks.Before(authapi.EventAuth, l.beforeAuth)
+	l.Callbacks.After(authapi.EventAuth, l.afterAuth)
+	l.Callbacks.After(authapi.EventAuthFail, l.afterAuthFail)
 
 	return nil
 }
 
 // Routes for the module
-func (l *Lock) Routes() authboss.RouteTable {
+func (l *Lock) Routes() authapi.RouteTable {
 	return nil
 }
 
 // Storage requirements
-func (l *Lock) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		l.PrimaryID:        authboss.String,
-		StoreAttemptNumber: authboss.Integer,
-		StoreAttemptTime:   authboss.DateTime,
-		StoreLocked:        authboss.DateTime,
+func (l *Lock) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		l.PrimaryID:        authapi.String,
+		StoreAttemptNumber: authapi.Integer,
+		StoreAttemptTime:   authapi.DateTime,
+		StoreLocked:        authapi.DateTime,
 	}
 }
 
 // beforeAuth ensures the account is not locked.
-func (l *Lock) beforeAuth(ctx *authboss.Context) (authboss.Interrupt, error) {
+func (l *Lock) beforeAuth(ctx *authapi.Context) (authapi.Interrupt, error) {
 	if ctx.User == nil {
-		return authboss.InterruptNone, errUserMissing
+		return authapi.InterruptNone, errUserMissing
 	}
 
 	if locked, ok := ctx.User.DateTime(StoreLocked); ok && locked.After(time.Now().UTC()) {
-		return authboss.InterruptAccountLocked, nil
+		return authapi.InterruptAccountLocked, nil
 	}
 
-	return authboss.InterruptNone, nil
+	return authapi.InterruptNone, nil
 }
 
 // afterAuth resets the attempt number field.
-func (l *Lock) afterAuth(ctx *authboss.Context) error {
+func (l *Lock) afterAuth(ctx *authapi.Context) error {
 	if ctx.User == nil {
 		return errUserMissing
 	}
@@ -92,7 +92,7 @@ func (l *Lock) afterAuth(ctx *authboss.Context) error {
 }
 
 // afterAuthFail adjusts the attempt number and time.
-func (l *Lock) afterAuthFail(ctx *authboss.Context) error {
+func (l *Lock) afterAuthFail(ctx *authapi.Context) error {
 	if ctx.User == nil {
 		return errUserMissing
 	}
@@ -134,7 +134,7 @@ func (l *Lock) Lock(key string) error {
 		return err
 	}
 
-	attr := authboss.Unbind(user)
+	attr := authapi.Unbind(user)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (l *Lock) Unlock(key string) error {
 		return err
 	}
 
-	attr := authboss.Unbind(user)
+	attr := authapi.Unbind(user)
 	if err != nil {
 		return err
 	}

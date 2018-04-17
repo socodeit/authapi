@@ -12,8 +12,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/response"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/response"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -48,7 +48,7 @@ var errRecoveryTokenExpired = errors.New("recovery token expired")
 // RecoverStorer must be implemented in order to satisfy the recover module's
 // storage requirements.
 type RecoverStorer interface {
-	authboss.Storer
+	authapi.Storer
 	// RecoverUser looks a user up by a recover token. See recover module for
 	// attribute names. If the key is not found in the data store,
 	// simply return nil, ErrUserNotFound.
@@ -57,19 +57,19 @@ type RecoverStorer interface {
 
 func init() {
 	m := &Recover{}
-	authboss.RegisterModule("recover", m)
+	authapi.RegisterModule("recover", m)
 }
 
 // Recover module
 type Recover struct {
-	*authboss.Authboss
+	*authapi.authapi
 	emailHTMLTemplates response.Templates
 	emailTextTemplates response.Templates
 }
 
 // Initialize module
-func (r *Recover) Initialize(ab *authboss.Authboss) (err error) {
-	r.Authboss = ab
+func (r *Recover) Initialize(ab *authapi.authapi) (err error) {
+	r.authapi = ab
 
 	if r.Storer != nil {
 		if _, ok := r.Storer.(RecoverStorer); !ok {
@@ -87,11 +87,11 @@ func (r *Recover) Initialize(ab *authboss.Authboss) (err error) {
 		return errors.New("auth: XSRFMaker must be defined")
 	}
 
-	r.emailHTMLTemplates, err = response.LoadTemplates(r.Authboss, r.LayoutHTMLEmail, r.ViewsPath, tplInitHTMLEmail)
+	r.emailHTMLTemplates, err = response.LoadTemplates(r.authapi, r.LayoutHTMLEmail, r.ViewsPath, tplInitHTMLEmail)
 	if err != nil {
 		return err
 	}
-	r.emailTextTemplates, err = response.LoadTemplates(r.Authboss, r.LayoutTextEmail, r.ViewsPath, tplInitTextEmail)
+	r.emailTextTemplates, err = response.LoadTemplates(r.authapi, r.LayoutTextEmail, r.ViewsPath, tplInitTextEmail)
 	if err != nil {
 		return err
 	}
@@ -100,44 +100,44 @@ func (r *Recover) Initialize(ab *authboss.Authboss) (err error) {
 }
 
 // Routes for module
-func (r *Recover) Routes() authboss.RouteTable {
-	return authboss.RouteTable{
+func (r *Recover) Routes() authapi.RouteTable {
+	return authapi.RouteTable{
 		"/recover":          r.startHandlerFunc,
 		"/recover/complete": r.completeHandlerFunc,
 	}
 }
 
 // Storage requirements
-func (r *Recover) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		r.PrimaryID:             authboss.String,
-		authboss.StoreEmail:     authboss.String,
-		authboss.StorePassword:  authboss.String,
-		StoreRecoverToken:       authboss.String,
-		StoreRecoverTokenExpiry: authboss.String,
+func (r *Recover) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		r.PrimaryID:             authapi.String,
+		authapi.StoreEmail:     authapi.String,
+		authapi.StorePassword:  authapi.String,
+		StoreRecoverToken:       authapi.String,
+		StoreRecoverTokenExpiry: authapi.String,
 	}
 }
 
-func (rec *Recover) startHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (rec *Recover) startHandlerFunc(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case methodGET:
 		return response.JSONResponse(ctx,w,r,false,"This api is used to restore/recover account.",[]string{rec.PrimaryID,"confirm_"+rec.PrimaryID,"csrf_token"})
 	case methodPOST:
 		primaryID := r.FormValue(rec.PrimaryID)
 
-		policies := authboss.FilterValidators(rec.Policies, rec.PrimaryID)
-		if validationErrs := authboss.Validate(r, policies, rec.PrimaryID, authboss.ConfirmPrefix+rec.PrimaryID).Map(); len(validationErrs) > 0 {
+		policies := authapi.FilterValidators(rec.Policies, rec.PrimaryID)
+		if validationErrs := authapi.Validate(r, policies, rec.PrimaryID, authapi.ConfirmPrefix+rec.PrimaryID).Map(); len(validationErrs) > 0 {
 			return response.JSONResponse(ctx,w,r,true,validationErrs,nil)
 		}
 
 		// redirect to login when user not found to prevent username sniffing
-		if err := ctx.LoadUser(primaryID); err == authboss.ErrUserNotFound {
+		if err := ctx.LoadUser(primaryID); err == authapi.ErrUserNotFound {
 			return response.JSONResponse(ctx,w,r,true,recoverUserNotFound,nil)
 		} else if err != nil {
 			return err
 		}
 
-		email, err := ctx.User.StringErr(authboss.StoreEmail)
+		email, err := ctx.User.StringErr(authapi.StoreEmail)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func newToken() (encodedToken, encodedChecksum string, err error) {
 	return base64.URLEncoding.EncodeToString(token), base64.StdEncoding.EncodeToString(sum[:]), nil
 }
 
-var goRecoverEmail = func(r *Recover, ctx *authboss.Context, to, encodedToken string) {
+var goRecoverEmail = func(r *Recover, ctx *authapi.Context, to, encodedToken string) {
 	if ctx.MailMaker != nil {
 		r.sendRecoverEmail(ctx, to, encodedToken)
 	} else {
@@ -182,12 +182,12 @@ var goRecoverEmail = func(r *Recover, ctx *authboss.Context, to, encodedToken st
 	}
 }
 
-func (r *Recover) sendRecoverEmail(ctx *authboss.Context, to, encodedToken string) {
+func (r *Recover) sendRecoverEmail(ctx *authapi.Context, to, encodedToken string) {
 	p := path.Join(r.MountPath, "recover/complete")
 	query := url.Values{formValueToken: []string{encodedToken}}
 	url := fmt.Sprintf("%s%s?%s", r.SiteURL, p, query.Encode())
 
-	email := authboss.Email{
+	email := authapi.Email{
 		To:       []string{to},
 		From:     r.EmailFrom,
 		FromName: r.EmailFromName,
@@ -199,7 +199,7 @@ func (r *Recover) sendRecoverEmail(ctx *authboss.Context, to, encodedToken strin
 	}
 }
 
-func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, req *http.Request) (err error) {
+func (r *Recover) completeHandlerFunc(ctx *authapi.Context, w http.ResponseWriter, req *http.Request) (err error) {
 	switch req.Method {
 	case methodGET:
 		_, err = verifyToken(ctx, req)
@@ -214,14 +214,14 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 	case methodPOST:
 		token := req.FormValue(formValueToken)
 		if len(token) == 0 {
-			return authboss.ClientDataErr{Name: formValueToken}
+			return authapi.ClientDataErr{Name: formValueToken}
 		}
 
-		password := req.FormValue(authboss.StorePassword)
+		password := req.FormValue(authapi.StorePassword)
 		//confirmPassword, _ := ctx.FirstPostFormValue("confirmPassword")
 
-		policies := authboss.FilterValidators(r.Policies, authboss.StorePassword)
-		if validationErrs := authboss.Validate(req, policies, authboss.StorePassword, authboss.ConfirmPrefix+authboss.StorePassword).Map(); len(validationErrs) > 0 {
+		policies := authapi.FilterValidators(r.Policies, authapi.StorePassword)
+		if validationErrs := authapi.Validate(req, policies, authapi.StorePassword, authapi.ConfirmPrefix+authapi.StorePassword).Map(); len(validationErrs) > 0 {
 			return response.JSONResponse(ctx,w,req,true,validationErrs,nil)
 		}
 
@@ -234,7 +234,7 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 			return err
 		}
 
-		ctx.User[authboss.StorePassword] = string(encryptedPassword)
+		ctx.User[authapi.StorePassword] = string(encryptedPassword)
 		ctx.User[StoreRecoverToken] = ""
 		var nullTime time.Time
 		ctx.User[StoreRecoverTokenExpiry] = nullTime
@@ -248,12 +248,12 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 			return err
 		}
 
-		if err := r.Callbacks.FireAfter(authboss.EventPasswordReset, ctx); err != nil {
+		if err := r.Callbacks.FireAfter(authapi.EventPasswordReset, ctx); err != nil {
 			return err
 		}
 
-		if r.Authboss.AllowLoginAfterResetPassword {
-			ctx.SessionStorer.Put(authboss.SessionKey, primaryID)
+		if r.authapi.AllowLoginAfterResetPassword {
+			ctx.SessionStorer.Put(authapi.SessionKey, primaryID)
 		}
 		return response.JSONResponse(ctx,w,req,false,"Password changed successfully.",nil)
 	default:
@@ -264,10 +264,10 @@ func (r *Recover) completeHandlerFunc(ctx *authboss.Context, w http.ResponseWrit
 }
 
 // verifyToken expects a base64.URLEncoded token.
-func verifyToken(ctx *authboss.Context, r *http.Request) (attrs authboss.Attributes, err error) {
+func verifyToken(ctx *authapi.Context, r *http.Request) (attrs authapi.Attributes, err error) {
 	token := r.FormValue(formValueToken)
 	if len(token) == 0 {
-		return nil, authboss.ClientDataErr{Name: token}
+		return nil, authapi.ClientDataErr{Name: token}
 	}
 
 	decoded, err := base64.URLEncoding.DecodeString(token)
@@ -283,7 +283,7 @@ func verifyToken(ctx *authboss.Context, r *http.Request) (attrs authboss.Attribu
 		return nil, err
 	}
 
-	attrs = authboss.Unbind(userInter)
+	attrs = authapi.Unbind(userInter)
 
 	expiry, ok := attrs.DateTime(StoreRecoverTokenExpiry)
 	if !ok || time.Now().After(expiry) {

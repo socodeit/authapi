@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 var testViewTemplate = template.Must(template.New("").Parse(`{{.external}} {{.fun}} {{.flash_success}} {{.flash_error}} {{.xsrfName}} {{.xsrfToken}}`))
@@ -20,7 +20,7 @@ var testEmailPlainTemplate = template.Must(template.New("").Parse(`i am a {{.}}`
 func TestLoadTemplates(t *testing.T) {
 	t.Parallel()
 
-	file, err := ioutil.TempFile(os.TempDir(), "authboss")
+	file, err := ioutil.TempFile(os.TempDir(), "authapi")
 	if err != nil {
 		t.Error("Unexpected error:", err)
 	}
@@ -28,14 +28,14 @@ func TestLoadTemplates(t *testing.T) {
 		t.Error("Error writing to temp file", err)
 	}
 
-	layout, err := template.New("").Parse(`<strong>{{template "authboss" .}}</strong>`)
+	layout, err := template.New("").Parse(`<strong>{{template "authapi" .}}</strong>`)
 	if err != nil {
 		t.Error("Unexpected error:", err)
 	}
 
 	filename := filepath.Base(file.Name())
 
-	tpls, err := LoadTemplates(authboss.New(), layout, filepath.Dir(file.Name()), filename)
+	tpls, err := LoadTemplates(authapi.New(), layout, filepath.Dir(file.Name()), filename)
 	if err != nil {
 		t.Error("Unexpected error:", err)
 	}
@@ -53,15 +53,15 @@ func TestTemplates_Render(t *testing.T) {
 	t.Parallel()
 
 	cookies := mocks.NewMockClientStorer()
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.XSRFName = "do you think"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "that's air you're breathing now?"
 	}
 
 	// Set up flashes
-	cookies.Put(authboss.FlashSuccessKey, "no")
-	cookies.Put(authboss.FlashErrorKey, "spoon")
+	cookies.Put(authapi.FlashSuccessKey, "no")
+	cookies.Put(authapi.FlashErrorKey, "spoon")
 
 	r, _ := http.NewRequest("GET", "http://localhost", nil)
 	w := httptest.NewRecorder()
@@ -76,14 +76,14 @@ func TestTemplates_Render(t *testing.T) {
 func Test_Email(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	mockMailer := &mocks.MockMailer{}
 	ab.Mailer = mockMailer
 
 	htmlTpls := Templates{"html": testEmailHTMLTemplate}
 	textTpls := Templates{"plain": testEmailPlainTemplate}
 
-	email := authboss.Email{
+	email := authapi.Email{
 		To: []string{"a@b.c"},
 	}
 

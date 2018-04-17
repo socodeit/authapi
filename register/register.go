@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/response"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/response"
 )
 
 const (
@@ -17,24 +17,24 @@ const (
 // RegisterStorer must be implemented in order to satisfy the register module's
 // storage requirments.
 type RegisterStorer interface {
-	authboss.Storer
+	authapi.Storer
 	// Create is the same as put, except it refers to a non-existent key.  If the key is
-	// found simply return authboss.ErrUserFound
-	Create(key string, attr authboss.Attributes) error
+	// found simply return authapi.ErrUserFound
+	Create(key string, attr authapi.Attributes) error
 }
 
 func init() {
-	authboss.RegisterModule("register", &Register{})
+	authapi.RegisterModule("register", &Register{})
 }
 
 // Register module.
 type Register struct {
-	*authboss.Authboss
+	*authapi.authapi
 }
 
 // Initialize the module.
-func (r *Register) Initialize(ab *authboss.Authboss) (err error) {
-	r.Authboss = ab
+func (r *Register) Initialize(ab *authapi.authapi) (err error) {
+	r.authapi = ab
 
 	if r.Storer != nil {
 		if _, ok := r.Storer.(RegisterStorer); !ok {
@@ -48,21 +48,21 @@ func (r *Register) Initialize(ab *authboss.Authboss) (err error) {
 }
 
 // Routes creates the routing table.
-func (r *Register) Routes() authboss.RouteTable {
-	return authboss.RouteTable{
+func (r *Register) Routes() authapi.RouteTable {
+	return authapi.RouteTable{
 		"/register": r.registerHandler,
 	}
 }
 
 // Storage returns storage requirements.
-func (r *Register) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		r.PrimaryID:            authboss.String,
-		authboss.StorePassword: authboss.String,
+func (r *Register) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		r.PrimaryID:            authapi.String,
+		authapi.StorePassword: authapi.String,
 	}
 }
 
-func (reg *Register) registerHandler(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (reg *Register) registerHandler(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case "GET":
 		return response.JSONResponse(ctx,w,r,false,"This api ised for user registration.",[]string{"<user-defined>","email","password","confirm_password","csrf_token"})
@@ -72,23 +72,23 @@ func (reg *Register) registerHandler(ctx *authboss.Context, w http.ResponseWrite
 	return nil
 }
 
-func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (reg *Register) registerPostHandler(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	key := r.FormValue(reg.PrimaryID)
-	password := r.FormValue(authboss.StorePassword)
+	password := r.FormValue(authapi.StorePassword)
 
-	validationErrs := authboss.Validate(r, reg.Policies, reg.ConfirmFields...)
+	validationErrs := authapi.Validate(r, reg.Policies, reg.ConfirmFields...)
 
-	if user, err := ctx.Storer.Get(key); err != nil && err != authboss.ErrUserNotFound {
+	if user, err := ctx.Storer.Get(key); err != nil && err != authapi.ErrUserNotFound {
 		return err
 	} else if user != nil {
-		validationErrs = append(validationErrs, authboss.FieldError{Name: reg.PrimaryID, Err: errors.New("Already in use")})
+		validationErrs = append(validationErrs, authapi.FieldError{Name: reg.PrimaryID, Err: errors.New("Already in use")})
 	}
 
 	if len(validationErrs) != 0 {
 		return response.JSONResponse(ctx,w,r,true,validationErrs.Map(),nil)
 	}
 
-	attr, err := authboss.AttributesFromRequest(r) // Attributes from overriden forms
+	attr, err := authapi.AttributesFromRequest(r) // Attributes from overriden forms
 	if err != nil {
 		return err
 	}
@@ -99,16 +99,16 @@ func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseW
 	}
 
 	attr[reg.PrimaryID] = key
-	attr[authboss.StorePassword] = string(pass)
+	attr[authapi.StorePassword] = string(pass)
 	ctx.User = attr
 
-	if err := ctx.Storer.(RegisterStorer).Create(key, attr); err == authboss.ErrUserFound {
+	if err := ctx.Storer.(RegisterStorer).Create(key, attr); err == authapi.ErrUserFound {
 		return response.JSONResponse(ctx,w,r,true,map[string][]string{reg.PrimaryID: []string{"Already in use"}},nil)
 	} else if err != nil {
 		return err
 	}
 
-	if err := reg.Callbacks.FireAfter(authboss.EventRegister, ctx); err != nil {
+	if err := reg.Callbacks.FireAfter(authapi.EventRegister, ctx); err != nil {
 		return err
 	}
 
@@ -116,6 +116,6 @@ func (reg *Register) registerPostHandler(ctx *authboss.Context, w http.ResponseW
 		return response.JSONResponse(ctx,w,r,false,"Account successfully created, please verify your e-mail address.",nil)
 	}
 
-	ctx.SessionStorer.Put(authboss.SessionKey, key)
+	ctx.SessionStorer.Put(authapi.SessionKey, key)
 	return response.JSONResponse(ctx,w,r,false,"Account successfully created, you are now logged in.",nil)
 }

@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"net/http"
@@ -8,11 +8,11 @@ import (
 var nowTime = time.Now
 
 // TimeToExpiry returns zero if the user session is expired else the time until expiry.
-func (a *Authboss) TimeToExpiry(w http.ResponseWriter, r *http.Request) time.Duration {
+func (a *authapi) TimeToExpiry(w http.ResponseWriter, r *http.Request) time.Duration {
 	return a.timeToExpiry(a.SessionStoreMaker(w, r))
 }
 
-func (a *Authboss) timeToExpiry(session ClientStorer) time.Duration {
+func (a *authapi) timeToExpiry(session ClientStorer) time.Duration {
 	dateStr, ok := session.Get(SessionLastAction)
 	if !ok {
 		return a.ExpireAfter
@@ -32,17 +32,17 @@ func (a *Authboss) timeToExpiry(session ClientStorer) time.Duration {
 }
 
 // RefreshExpiry  updates the last action for the user, so he doesn't become expired.
-func (a *Authboss) RefreshExpiry(w http.ResponseWriter, r *http.Request) {
+func (a *authapi) RefreshExpiry(w http.ResponseWriter, r *http.Request) {
 	session := a.SessionStoreMaker(w, r)
 	a.refreshExpiry(session)
 }
 
-func (a *Authboss) refreshExpiry(session ClientStorer) {
+func (a *authapi) refreshExpiry(session ClientStorer) {
 	session.Put(SessionLastAction, nowTime().UTC().Format(time.RFC3339))
 }
 
 type expireMiddleware struct {
-	ab   *Authboss
+	ab   *authapi
 	next http.Handler
 }
 
@@ -51,7 +51,7 @@ type expireMiddleware struct {
 // expired (a.ExpireAfter duration since SessionLastAction).
 // This middleware conflicts with use of the Remember module, don't enable both
 // at the same time.
-func (a *Authboss) ExpireMiddleware(next http.Handler) http.Handler {
+func (a *authapi) ExpireMiddleware(next http.Handler) http.Handler {
 	return expireMiddleware{a, next}
 }
 

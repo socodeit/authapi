@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
-	"github.com/socodeit/authboss"
+	"github.com/socodeit/authapi"
 )
 
 func TestGoogle(t *testing.T) {
@@ -37,10 +37,10 @@ func TestGoogle(t *testing.T) {
 		t.Error(err)
 	}
 
-	if uid, ok := user[authboss.StoreOAuth2UID]; !ok || uid != "id" {
+	if uid, ok := user[authapi.StoreOAuth2UID]; !ok || uid != "id" {
 		t.Error("UID wrong:", uid)
 	}
-	if email, ok := user[authboss.StoreEmail]; !ok || email != "email" {
+	if email, ok := user[authapi.StoreEmail]; !ok || email != "email" {
 		t.Error("Email wrong:", email)
 	}
 }
@@ -70,10 +70,10 @@ func TestFacebook(t *testing.T) {
 		t.Error(err)
 	}
 
-	if uid, ok := user[authboss.StoreOAuth2UID]; !ok || uid != "id" {
+	if uid, ok := user[authapi.StoreOAuth2UID]; !ok || uid != "id" {
 		t.Error("UID wrong:", uid)
 	}
-	if email, ok := user[authboss.StoreEmail]; !ok || email != "email" {
+	if email, ok := user[authapi.StoreEmail]; !ok || email != "email" {
 		t.Error("Email wrong:", email)
 	}
 	if name, ok := user["name"]; !ok || name != "name" {

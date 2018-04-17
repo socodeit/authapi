@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/response"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/response"
 )
 
 const (
@@ -19,17 +19,17 @@ const (
 )
 
 func init() {
-	authboss.RegisterModule("auth", &Auth{})
+	authapi.RegisterModule("auth", &Auth{})
 }
 
 // Auth module
 type Auth struct {
-	*authboss.Authboss
+	*authapi.authapi
 }
 
 // Initialize module
-func (a *Auth) Initialize(ab *authboss.Authboss) (err error) {
-	a.Authboss = ab
+func (a *Auth) Initialize(ab *authapi.authapi) (err error) {
+	a.authapi = ab
 
 	if a.Storer == nil && a.StoreMaker == nil {
 		return errors.New("auth: Need a Storer")
@@ -47,22 +47,22 @@ func (a *Auth) Initialize(ab *authboss.Authboss) (err error) {
 }
 
 // Routes for the module
-func (a *Auth) Routes() authboss.RouteTable {
-	return authboss.RouteTable{
+func (a *Auth) Routes() authapi.RouteTable {
+	return authapi.RouteTable{
 		"/login":  a.loginHandlerFunc,
 		"/logout": a.logoutHandlerFunc,
 	}
 }
 
 // Storage requirements
-func (a *Auth) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		a.PrimaryID:            authboss.String,
-		authboss.StorePassword: authboss.String,
+func (a *Auth) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		a.PrimaryID:            authapi.String,
+		authapi.StorePassword: authapi.String,
 	}
 }
 
-func (a *Auth) loginHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (a *Auth) loginHandlerFunc(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case methodGET:
 		return response.JSONResponse(ctx,w,r,false,"This api is used for logging in.",[]string{"email","password","csrf_token"})
@@ -76,30 +76,30 @@ func (a *Auth) loginHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r 
 			fmt.Fprintf(ctx.LogWriter, "auth: validate credentials failed: %v\n", err)
 			return response.JSONResponse(ctx,w,r,true,message,nil)
 		} else if !valid {
-			if err := a.Callbacks.FireAfter(authboss.EventAuthFail, ctx); err != nil {
+			if err := a.Callbacks.FireAfter(authapi.EventAuthFail, ctx); err != nil {
 				fmt.Fprintf(ctx.LogWriter, "EventAuthFail callback error'd out: %v\n", err)
 			}
 			return response.JSONResponse(ctx,w,r,true,fmt.Sprintf("invalid %s and/or password", a.PrimaryID),nil)
 		}
 
-		interrupted, err := a.Callbacks.FireBefore(authboss.EventAuth, ctx)
+		interrupted, err := a.Callbacks.FireBefore(authapi.EventAuth, ctx)
 		if err != nil {
 			return err
-		} else if interrupted != authboss.InterruptNone {
+		} else if interrupted != authapi.InterruptNone {
 			switch interrupted {
-			case authboss.InterruptAccountLocked:
+			case authapi.InterruptAccountLocked:
 				message = "Your account has been locked."
-			case authboss.InterruptAccountNotConfirmed:
+			case authapi.InterruptAccountNotConfirmed:
 				message = "Your account has not been confirmed."
 			}
 			response.JSONResponse(ctx,w,r,true,message,nil)
 		}
 
-		ctx.SessionStorer.Put(authboss.SessionKey, key)
-		ctx.SessionStorer.Del(authboss.SessionHalfAuthKey)
-		ctx.Values = map[string]string{authboss.CookieRemember: r.FormValue(authboss.CookieRemember)}
+		ctx.SessionStorer.Put(authapi.SessionKey, key)
+		ctx.SessionStorer.Del(authapi.SessionHalfAuthKey)
+		ctx.Values = map[string]string{authapi.CookieRemember: r.FormValue(authapi.CookieRemember)}
 
-		if err := a.Callbacks.FireAfter(authboss.EventAuth, ctx); err != nil {
+		if err := a.Callbacks.FireAfter(authapi.EventAuth, ctx); err != nil {
 			return err
 		}
 		response.JSONResponse(ctx,w,r,false,message,nil)
@@ -110,14 +110,14 @@ func (a *Auth) loginHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r 
 	return nil
 }
 
-func validateCredentials(ctx *authboss.Context, key, password string) (bool, error) {
-	if err := ctx.LoadUser(key); err == authboss.ErrUserNotFound {
+func validateCredentials(ctx *authapi.Context, key, password string) (bool, error) {
+	if err := ctx.LoadUser(key); err == authapi.ErrUserNotFound {
 		return false, nil
 	} else if err != nil {
 		return false, err
 	}
 
-	actualPassword, err := ctx.User.StringErr(authboss.StorePassword)
+	actualPassword, err := ctx.User.StringErr(authapi.StorePassword)
 	if err != nil {
 		return false, err
 	}
@@ -129,12 +129,12 @@ func validateCredentials(ctx *authboss.Context, key, password string) (bool, err
 	return true, nil
 }
 
-func (a *Auth) logoutHandlerFunc(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (a *Auth) logoutHandlerFunc(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	switch r.Method {
 	case methodGET:
-		ctx.SessionStorer.Del(authboss.SessionKey)
-		ctx.CookieStorer.Del(authboss.CookieRemember)
-		ctx.SessionStorer.Del(authboss.SessionLastAction)
+		ctx.SessionStorer.Del(authapi.SessionKey)
+		ctx.CookieStorer.Del(authapi.CookieRemember)
+		ctx.SessionStorer.Del(authapi.SessionLastAction)
 		return response.JSONResponse(ctx,w,r,false,"Logged out successfully.",nil)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)

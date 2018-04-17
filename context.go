@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ var (
 // need for context is a request's session store. It is not safe for use by
 // multiple goroutines.
 type Context struct {
-	*Authboss
+	*authapi
 
 	SessionStorer ClientStorerErr
 	CookieStorer  ClientStorerErr
@@ -27,13 +27,13 @@ type Context struct {
 }
 
 // NewContext is exported for testing modules.
-func (a *Authboss) NewContext() *Context {
+func (a *authapi) NewContext() *Context {
 	return &Context{
-		Authboss: a,
+		authapi: a,
 	}
 }
 
-func (a *Authboss) InitContext(w http.ResponseWriter, r *http.Request) *Context {
+func (a *authapi) InitContext(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := a.NewContext()
 
 	if ctx.StoreMaker != nil {

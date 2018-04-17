@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 func TestStorage(t *testing.T) {
 	t.Parallel()
 
-	l := &Lock{authboss.New()}
+	l := &Lock{authapi.New()}
 	storage := l.Storage()
 	if _, ok := storage[StoreAttemptNumber]; !ok {
 		t.Error("Expected attempt number storage option.")
@@ -28,20 +28,20 @@ func TestBeforeAuth(t *testing.T) {
 	t.Parallel()
 
 	l := &Lock{}
-	ab := authboss.New()
+	ab := authapi.New()
 	ctx := ab.NewContext()
 
 	if interrupt, err := l.beforeAuth(ctx); err != errUserMissing {
 		t.Error("Expected an error because of missing user:", err)
-	} else if interrupt != authboss.InterruptNone {
+	} else if interrupt != authapi.InterruptNone {
 		t.Error("Interrupt should not be set:", interrupt)
 	}
 
-	ctx.User = authboss.Attributes{"locked": time.Now().Add(1 * time.Hour)}
+	ctx.User = authapi.Attributes{"locked": time.Now().Add(1 * time.Hour)}
 
 	if interrupt, err := l.beforeAuth(ctx); err != nil {
 		t.Error(err)
-	} else if interrupt != authboss.InterruptAccountLocked {
+	} else if interrupt != authapi.InterruptAccountLocked {
 		t.Error("Expected a locked interrupt:", interrupt)
 	}
 }
@@ -49,7 +49,7 @@ func TestBeforeAuth(t *testing.T) {
 func TestAfterAuth(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	lock := Lock{}
 	ctx := ab.NewContext()
 
@@ -59,7 +59,7 @@ func TestAfterAuth(t *testing.T) {
 
 	storer := mocks.NewMockStorer()
 	ab.Storer = storer
-	ctx.User = authboss.Attributes{ab.PrimaryID: "john@john.com"}
+	ctx.User = authapi.Attributes{ab.PrimaryID: "john@john.com"}
 
 	if err := lock.afterAuth(ctx); err != nil {
 		t.Error(err)
@@ -75,7 +75,7 @@ func TestAfterAuth(t *testing.T) {
 func TestAfterAuthFail_Lock(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	var old, current time.Time
 	var ok bool
 
@@ -125,7 +125,7 @@ func TestAfterAuthFail_Lock(t *testing.T) {
 func TestAfterAuthFail_Reset(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	var old, current time.Time
 	var ok bool
 
@@ -160,7 +160,7 @@ func TestAfterAuthFail_Reset(t *testing.T) {
 func TestAfterAuthFail_Errors(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	lock := Lock{ab}
 	ctx := ab.NewContext()
 
@@ -173,7 +173,7 @@ func TestAfterAuthFail_Errors(t *testing.T) {
 func TestLock(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	storer := mocks.NewMockStorer()
 	ab.Storer = storer
 	lock := Lock{ab}
@@ -197,7 +197,7 @@ func TestLock(t *testing.T) {
 func TestUnlock(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	storer := mocks.NewMockStorer()
 	ab.Storer = storer
 	lock := Lock{ab}

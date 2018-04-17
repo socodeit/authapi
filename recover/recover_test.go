@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 const (
@@ -25,26 +25,26 @@ func testSetup() (r *Recover, s *mocks.MockStorer, l *bytes.Buffer) {
 	s = mocks.NewMockStorer()
 	l = &bytes.Buffer{}
 
-	ab := authboss.New()
-	ab.LayoutHTMLEmail = template.Must(template.New("").Parse(`<strong>{{template "authboss" .}}</strong>`))
-	ab.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "authboss" .}}`))
+	ab := authapi.New()
+	ab.LayoutHTMLEmail = template.Must(template.New("").Parse(`<strong>{{template "authapi" .}}</strong>`))
+	ab.LayoutTextEmail = template.Must(template.New("").Parse(`{{template "authapi" .}}`))
 	ab.Storer = s
 	ab.XSRFName = "xsrf"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "xsrfvalue"
 	}
-	ab.PrimaryID = authboss.StoreUsername
+	ab.PrimaryID = authapi.StoreUsername
 	ab.LogWriter = l
 
-	ab.Policies = []authboss.Validator{
-		authboss.Rules{
+	ab.Policies = []authapi.Validator{
+		authapi.Rules{
 			FieldName:       "username",
 			Required:        true,
 			MinLength:       2,
 			MaxLength:       4,
 			AllowWhitespace: false,
 		},
-		authboss.Rules{
+		authapi.Rules{
 			FieldName:       "password",
 			Required:        true,
 			MinLength:       4,
@@ -61,7 +61,7 @@ func testSetup() (r *Recover, s *mocks.MockStorer, l *bytes.Buffer) {
 	return r, s, l
 }
 
-func testRequest(ab *authboss.Authboss, method string, postFormValues ...string) (*authboss.Context, *httptest.ResponseRecorder, *http.Request, authboss.ClientStorerErr) {
+func testRequest(ab *authapi.authapi, method string, postFormValues ...string) (*authapi.Context, *httptest.ResponseRecorder, *http.Request, authapi.ClientStorerErr) {
 	sessionStorer := mocks.NewMockClientStorer()
 	ctx := ab.NewContext()
 	r := mocks.MockRequest(method, postFormValues...)
@@ -76,20 +76,20 @@ func TestRecover(t *testing.T) {
 	r, _, _ := testSetup()
 
 	storage := r.Storage()
-	if storage[r.PrimaryID] != authboss.String {
-		t.Error("Expected storage KV:", r.PrimaryID, authboss.String)
+	if storage[r.PrimaryID] != authapi.String {
+		t.Error("Expected storage KV:", r.PrimaryID, authapi.String)
 	}
-	if storage[authboss.StoreEmail] != authboss.String {
-		t.Error("Expected storage KV:", authboss.StoreEmail, authboss.String)
+	if storage[authapi.StoreEmail] != authapi.String {
+		t.Error("Expected storage KV:", authapi.StoreEmail, authapi.String)
 	}
-	if storage[authboss.StorePassword] != authboss.String {
-		t.Error("Expected storage KV:", authboss.StorePassword, authboss.String)
+	if storage[authapi.StorePassword] != authapi.String {
+		t.Error("Expected storage KV:", authapi.StorePassword, authapi.String)
 	}
-	if storage[StoreRecoverToken] != authboss.String {
-		t.Error("Expected storage KV:", StoreRecoverToken, authboss.String)
+	if storage[StoreRecoverToken] != authapi.String {
+		t.Error("Expected storage KV:", StoreRecoverToken, authapi.String)
 	}
-	if storage[StoreRecoverTokenExpiry] != authboss.String {
-		t.Error("Expected storage KV:", StoreRecoverTokenExpiry, authboss.String)
+	if storage[StoreRecoverTokenExpiry] != authapi.String {
+		t.Error("Expected storage KV:", StoreRecoverTokenExpiry, authapi.String)
 	}
 
 	routes := r.Routes()
@@ -105,7 +105,7 @@ func TestRecover_startHandlerFunc_GET(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "GET")
+	ctx, w, r, _ := testRequest(rec.authapi, "GET")
 
 	if err := rec.startHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -131,7 +131,7 @@ func TestRecover_startHandlerFunc_POST_ValidationFails(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "POST")
+	ctx, w, r, _ := testRequest(rec.authapi, "POST")
 
 	if err := rec.startHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -150,13 +150,13 @@ func TestRecover_startHandlerFunc_POST_UserNotFound(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "POST", "username", "john", "confirm_username", "john")
+	ctx, w, r, _ := testRequest(rec.authapi, "POST", "username", "john", "confirm_username", "john")
 
 	err := rec.startHandlerFunc(ctx, w, r)
 	if err == nil {
 		t.Error("Expected error:", err)
 	}
-	rerr, ok := err.(authboss.ErrAndRedirect)
+	rerr, ok := err.(authapi.ErrAndRedirect)
 	if !ok {
 		t.Error("Expected ErrAndRedirect error")
 	}
@@ -175,14 +175,14 @@ func TestRecover_startHandlerFunc_POST(t *testing.T) {
 
 	rec, storer, _ := testSetup()
 
-	storer.Users["john"] = authboss.Attributes{authboss.StoreUsername: "john", authboss.StoreEmail: "a@b.c"}
+	storer.Users["john"] = authapi.Attributes{authapi.StoreUsername: "john", authapi.StoreEmail: "a@b.c"}
 
 	sentEmail := false
-	goRecoverEmail = func(_ *Recover, _ *authboss.Context, _, _ string) {
+	goRecoverEmail = func(_ *Recover, _ *authapi.Context, _, _ string) {
 		sentEmail = true
 	}
 
-	ctx, w, r, sessionStorer := testRequest(rec.Authboss, "POST", "username", "john", "confirm_username", "john")
+	ctx, w, r, sessionStorer := testRequest(rec.authapi, "POST", "username", "john", "confirm_username", "john")
 
 	if err := rec.startHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -213,7 +213,7 @@ func TestRecover_startHandlerFunc_POST(t *testing.T) {
 		t.Error("Unexpected location:", loc)
 	}
 
-	if value, ok := sessionStorer.Get(authboss.FlashSuccessKey); !ok {
+	if value, ok := sessionStorer.Get(authapi.FlashSuccessKey); !ok {
 		t.Error("Expected success flash message")
 	} else if value != recoverInitiateSuccessFlash {
 		t.Error("Unexpected success flash message")
@@ -228,7 +228,7 @@ func TestRecover_startHandlerFunc_OtherMethods(t *testing.T) {
 	methods := []string{"HEAD", "PUT", "DELETE", "TRACE", "CONNECT"}
 
 	for i, method := range methods {
-		_, w, r, _ := testRequest(rec.Authboss, method)
+		_, w, r, _ := testRequest(rec.authapi, method)
 
 		if err := rec.startHandlerFunc(nil, w, r); err != nil {
 			t.Errorf("%d> Unexpected error: %s", i, err)
@@ -309,10 +309,10 @@ func TestRecover_completeHandlerFunc_GET_VerifyFails(t *testing.T) {
 
 	rec, storer, _ := testSetup()
 
-	ctx, w, r, _ := testRequest(rec.Authboss, "GET", "token", testURLBase64Token)
+	ctx, w, r, _ := testRequest(rec.authapi, "GET", "token", testURLBase64Token)
 
 	err := rec.completeHandlerFunc(ctx, w, r)
-	rerr, ok := err.(authboss.ErrAndRedirect)
+	rerr, ok := err.(authapi.ErrAndRedirect)
 	if !ok {
 		t.Error("Expected ErrAndRedirect:", err)
 	}
@@ -321,12 +321,12 @@ func TestRecover_completeHandlerFunc_GET_VerifyFails(t *testing.T) {
 	}
 
 	var zeroTime time.Time
-	storer.Users["john"] = authboss.Attributes{StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: zeroTime}
+	storer.Users["john"] = authapi.Attributes{StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: zeroTime}
 
-	ctx, w, r, _ = testRequest(rec.Authboss, "GET", "token", testURLBase64Token)
+	ctx, w, r, _ = testRequest(rec.authapi, "GET", "token", testURLBase64Token)
 
 	err = rec.completeHandlerFunc(ctx, w, r)
-	rerr, ok = err.(authboss.ErrAndRedirect)
+	rerr, ok = err.(authapi.ErrAndRedirect)
 	if !ok {
 		t.Error("Expected ErrAndRedirect")
 	}
@@ -343,9 +343,9 @@ func TestRecover_completeHandlerFunc_GET(t *testing.T) {
 
 	rec, storer, _ := testSetup()
 
-	storer.Users["john"] = authboss.Attributes{StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: time.Now().Add(1 * time.Hour)}
+	storer.Users["john"] = authapi.Attributes{StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: time.Now().Add(1 * time.Hour)}
 
-	ctx, w, r, _ := testRequest(rec.Authboss, "GET", "token", testURLBase64Token)
+	ctx, w, r, _ := testRequest(rec.authapi, "GET", "token", testURLBase64Token)
 
 	if err := rec.completeHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -374,7 +374,7 @@ func TestRecover_completeHandlerFunc_POST_TokenMissing(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "POST")
+	ctx, w, r, _ := testRequest(rec.authapi, "POST")
 
 	err := rec.completeHandlerFunc(ctx, w, r)
 	if err == nil || err.Error() != "Failed to retrieve client attribute: token" {
@@ -387,7 +387,7 @@ func TestRecover_completeHandlerFunc_POST_ValidationFails(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "POST", "token", testURLBase64Token)
+	ctx, w, r, _ := testRequest(rec.authapi, "POST", "token", testURLBase64Token)
 
 	if err := rec.completeHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -406,7 +406,7 @@ func TestRecover_completeHandlerFunc_POST_VerificationFails(t *testing.T) {
 	t.Parallel()
 
 	rec, _, _ := testSetup()
-	ctx, w, r, _ := testRequest(rec.Authboss, "POST", "token", testURLBase64Token, authboss.StorePassword, "abcd", "confirm_"+authboss.StorePassword, "abcd")
+	ctx, w, r, _ := testRequest(rec.authapi, "POST", "token", testURLBase64Token, authapi.StorePassword, "abcd", "confirm_"+authapi.StorePassword, "abcd")
 
 	if err := rec.completeHandlerFunc(ctx, w, r); err == nil {
 		log.Println(w.Body.String())
@@ -419,19 +419,19 @@ func TestRecover_completeHandlerFunc_POST(t *testing.T) {
 
 	rec, storer, _ := testSetup()
 
-	storer.Users["john"] = authboss.Attributes{rec.PrimaryID: "john", StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: time.Now().Add(1 * time.Hour), authboss.StorePassword: "asdf"}
+	storer.Users["john"] = authapi.Attributes{rec.PrimaryID: "john", StoreRecoverToken: testStdBase64Token, StoreRecoverTokenExpiry: time.Now().Add(1 * time.Hour), authapi.StorePassword: "asdf"}
 
 	cbCalled := false
 
-	rec.Callbacks = authboss.NewCallbacks()
-	rec.Callbacks.After(authboss.EventPasswordReset, func(_ *authboss.Context) error {
+	rec.Callbacks = authapi.NewCallbacks()
+	rec.Callbacks.After(authapi.EventPasswordReset, func(_ *authapi.Context) error {
 		cbCalled = true
 		return nil
 	})
 
-	rec.Authboss.AllowLoginAfterResetPassword = false
+	rec.authapi.AllowLoginAfterResetPassword = false
 
-	ctx, w, r, sessionStorer := testRequest(rec.Authboss, "POST", "token", testURLBase64Token, authboss.StorePassword, "abcd", "confirm_"+authboss.StorePassword, "abcd")
+	ctx, w, r, sessionStorer := testRequest(rec.authapi, "POST", "token", testURLBase64Token, authapi.StorePassword, "abcd", "confirm_"+authapi.StorePassword, "abcd")
 
 	if err := rec.completeHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -440,7 +440,7 @@ func TestRecover_completeHandlerFunc_POST(t *testing.T) {
 	var zeroTime time.Time
 
 	u := storer.Users["john"]
-	if password, ok := u.String(authboss.StorePassword); !ok || password == "asdf" {
+	if password, ok := u.String(authapi.StorePassword); !ok || password == "asdf" {
 		t.Error("Expected password to have been reset")
 	}
 
@@ -456,7 +456,7 @@ func TestRecover_completeHandlerFunc_POST(t *testing.T) {
 		t.Error("Expected EventPasswordReset callback to have been fired")
 	}
 
-	if _, ok := sessionStorer.Get(authboss.SessionKey); ok {
+	if _, ok := sessionStorer.Get(authapi.SessionKey); ok {
 		t.Error("Should not have logged the user in since AllowInsecureLoginAfterConfirm is false.")
 	}
 
@@ -485,13 +485,13 @@ func Test_verifyToken_InvalidToken(t *testing.T) {
 	t.Parallel()
 
 	rec, storer, _ := testSetup()
-	storer.Users["a"] = authboss.Attributes{
+	storer.Users["a"] = authapi.Attributes{
 		StoreRecoverToken: testStdBase64Token,
 	}
 
-	ctx := rec.Authboss.NewContext()
+	ctx := rec.authapi.NewContext()
 	req, _ := http.NewRequest("GET", "/?token=asdf", nil)
-	if _, err := verifyToken(ctx, req); err != authboss.ErrUserNotFound {
+	if _, err := verifyToken(ctx, req); err != authapi.ErrUserNotFound {
 		t.Error("Unexpected error:", err)
 	}
 }
@@ -500,12 +500,12 @@ func Test_verifyToken_ExpiredToken(t *testing.T) {
 	t.Parallel()
 
 	rec, storer, _ := testSetup()
-	storer.Users["a"] = authboss.Attributes{
+	storer.Users["a"] = authapi.Attributes{
 		StoreRecoverToken:       testStdBase64Token,
 		StoreRecoverTokenExpiry: time.Now().Add(time.Duration(-24) * time.Hour),
 	}
 
-	ctx := rec.Authboss.NewContext()
+	ctx := rec.authapi.NewContext()
 	req, _ := http.NewRequest("GET", "/?token="+testURLBase64Token, nil)
 	if _, err := verifyToken(ctx, req); err != errRecoveryTokenExpired {
 		t.Error("Unexpected error:", err)
@@ -516,12 +516,12 @@ func Test_verifyToken(t *testing.T) {
 	t.Parallel()
 
 	rec, storer, _ := testSetup()
-	storer.Users["a"] = authboss.Attributes{
+	storer.Users["a"] = authapi.Attributes{
 		StoreRecoverToken:       testStdBase64Token,
 		StoreRecoverTokenExpiry: time.Now().Add(time.Duration(24) * time.Hour),
 	}
 
-	ctx := rec.Authboss.NewContext()
+	ctx := rec.authapi.NewContext()
 	req, _ := http.NewRequest("GET", "/?token="+testURLBase64Token, nil)
 	attrs, err := verifyToken(ctx, req)
 	if err != nil {

@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ type HandlerFunc func(*Context, http.ResponseWriter, *http.Request) error
 type RouteTable map[string]HandlerFunc
 
 // NewRouter returns a router to be mounted at some mountpoint.
-func (a *Authboss) NewRouter() http.Handler {
+func (a *authapi) NewRouter() http.Handler {
 	if a.mux != nil {
 		return a.mux
 	}
@@ -41,13 +41,13 @@ func (a *Authboss) NewRouter() http.Handler {
 }
 
 type contextRoute struct {
-	*Authboss
+	*authapi
 	fn HandlerFunc
 }
 
 func (c contextRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Instantiate the context
-	ctx := c.Authboss.InitContext(w, r)
+	ctx := c.authapi.InitContext(w, r)
 
 	// Check to make sure we actually need to visit this route
 	if redirectIfLoggedIn(ctx, w, r) {

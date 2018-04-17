@@ -9,21 +9,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 func testSetup() (a *Auth, s *mocks.MockStorer) {
 	s = mocks.NewMockStorer()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.LogWriter = ioutil.Discard
 	ab.Storer = s
 	ab.XSRFName = "xsrf"
 	ab.XSRFMaker = func(_ http.ResponseWriter, _ *http.Request) string {
 		return "xsrfvalue"
 	}
-	ab.PrimaryID = authboss.StoreUsername
+	ab.PrimaryID = authapi.StoreUsername
 
 	a = &Auth{}
 	if err := a.Initialize(ab); err != nil {
@@ -33,7 +33,7 @@ func testSetup() (a *Auth, s *mocks.MockStorer) {
 	return a, s
 }
 
-func testRequest(ab *authboss.Authboss, method string, postFormValues ...string) (*authboss.Context, *httptest.ResponseRecorder, *http.Request, authboss.ClientStorerErr) {
+func testRequest(ab *authapi.authapi, method string, postFormValues ...string) (*authapi.Context, *httptest.ResponseRecorder, *http.Request, authapi.ClientStorerErr) {
 	sessionStorer := mocks.NewMockClientStorer()
 	ctx := ab.NewContext()
 	r := mocks.MockRequest(method, postFormValues...)
@@ -48,11 +48,11 @@ func TestAuth(t *testing.T) {
 	a, _ := testSetup()
 
 	storage := a.Storage()
-	if storage[a.PrimaryID] != authboss.String {
-		t.Error("Expected storage KV:", a.PrimaryID, authboss.String)
+	if storage[a.PrimaryID] != authapi.String {
+		t.Error("Expected storage KV:", a.PrimaryID, authapi.String)
 	}
-	if storage[authboss.StorePassword] != authboss.String {
-		t.Error("Expected storage KV:", authboss.StorePassword, authboss.String)
+	if storage[authapi.StorePassword] != authapi.String {
+		t.Error("Expected storage KV:", authapi.StorePassword, authapi.String)
 	}
 
 	routes := a.Routes()
@@ -68,7 +68,7 @@ func TestAuth_loginHandlerFunc_GET(t *testing.T) {
 	t.Parallel()
 
 	a, _ := testSetup()
-	ctx, w, r, _ := testRequest(a.Authboss, "GET")
+	ctx, w, r, _ := testRequest(a.authapi, "GET")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -94,14 +94,14 @@ func TestAuth_loginHandlerFunc_POST_ReturnsErrorOnCallbackFailure(t *testing.T) 
 	t.Parallel()
 
 	a, storer := testSetup()
-	storer.Users["john"] = authboss.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
+	storer.Users["john"] = authapi.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
 
-	a.Callbacks = authboss.NewCallbacks()
-	a.Callbacks.Before(authboss.EventAuth, func(_ *authboss.Context) (authboss.Interrupt, error) {
-		return authboss.InterruptNone, errors.New("explode")
+	a.Callbacks = authapi.NewCallbacks()
+	a.Callbacks.Before(authapi.EventAuth, func(_ *authapi.Context) (authapi.Interrupt, error) {
+		return authapi.InterruptNone, errors.New("explode")
 	})
 
-	ctx, w, r, _ := testRequest(a.Authboss, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err.Error() != "explode" {
 		t.Error("Unexpected error:", err)
@@ -112,14 +112,14 @@ func TestAuth_loginHandlerFunc_POST_RedirectsWhenInterrupted(t *testing.T) {
 	t.Parallel()
 
 	a, storer := testSetup()
-	storer.Users["john"] = authboss.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
+	storer.Users["john"] = authapi.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
 
-	a.Callbacks = authboss.NewCallbacks()
-	a.Callbacks.Before(authboss.EventAuth, func(_ *authboss.Context) (authboss.Interrupt, error) {
-		return authboss.InterruptAccountLocked, nil
+	a.Callbacks = authapi.NewCallbacks()
+	a.Callbacks.Before(authapi.EventAuth, func(_ *authapi.Context) (authapi.Interrupt, error) {
+		return authapi.InterruptAccountLocked, nil
 	})
 
-	ctx, w, r, sessionStore := testRequest(a.Authboss, "POST", "username", "john", "password", "1234")
+	ctx, w, r, sessionStore := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -135,13 +135,13 @@ func TestAuth_loginHandlerFunc_POST_RedirectsWhenInterrupted(t *testing.T) {
 	}
 
 	expectedMsg := "Your account has been locked."
-	if msg, ok := sessionStore.Get(authboss.FlashErrorKey); !ok || msg != expectedMsg {
+	if msg, ok := sessionStore.Get(authapi.FlashErrorKey); !ok || msg != expectedMsg {
 		t.Error("Expected error flash message:", expectedMsg)
 	}
 
-	a.Callbacks = authboss.NewCallbacks()
-	a.Callbacks.Before(authboss.EventAuth, func(_ *authboss.Context) (authboss.Interrupt, error) {
-		return authboss.InterruptAccountNotConfirmed, nil
+	a.Callbacks = authapi.NewCallbacks()
+	a.Callbacks.Before(authapi.EventAuth, func(_ *authapi.Context) (authapi.Interrupt, error) {
+		return authapi.InterruptAccountNotConfirmed, nil
 	})
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
@@ -158,7 +158,7 @@ func TestAuth_loginHandlerFunc_POST_RedirectsWhenInterrupted(t *testing.T) {
 	}
 
 	expectedMsg = "Your account has not been confirmed."
-	if msg, ok := sessionStore.Get(authboss.FlashErrorKey); !ok || msg != expectedMsg {
+	if msg, ok := sessionStore.Get(authapi.FlashErrorKey); !ok || msg != expectedMsg {
 		t.Error("Expected error flash message:", expectedMsg)
 	}
 }
@@ -171,7 +171,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 	log := &bytes.Buffer{}
 	a.LogWriter = log
 
-	ctx, w, r, _ := testRequest(a.Authboss, "POST", "username", "john", "password", "1")
+	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -186,7 +186,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 		t.Error("Should have rendered with error")
 	}
 
-	ctx, w, r, _ = testRequest(a.Authboss, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ = testRequest(a.authapi, "POST", "username", "john", "password", "1234")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -201,7 +201,7 @@ func TestAuth_loginHandlerFunc_POST_AuthenticationFailure(t *testing.T) {
 		t.Error("Should have rendered with error")
 	}
 
-	ctx, w, r, _ = testRequest(a.Authboss, "POST", "username", "jake", "password", "1")
+	ctx, w, r, _ = testRequest(a.authapi, "POST", "username", "jake", "password", "1")
 
 	if err := a.loginHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
@@ -221,13 +221,13 @@ func TestAuth_loginHandlerFunc_POST(t *testing.T) {
 	t.Parallel()
 
 	a, storer := testSetup()
-	storer.Users["john"] = authboss.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
+	storer.Users["john"] = authapi.Attributes{"password": "$2a$10$B7aydtqVF9V8RSNx3lCKB.l09jqLV/aMiVqQHajtL7sWGhCS9jlOu"}
 
-	ctx, w, r, _ := testRequest(a.Authboss, "POST", "username", "john", "password", "1234")
+	ctx, w, r, _ := testRequest(a.authapi, "POST", "username", "john", "password", "1234")
 	cb := mocks.NewMockAfterCallback()
 
-	a.Callbacks = authboss.NewCallbacks()
-	a.Callbacks.After(authboss.EventAuth, cb.Fn)
+	a.Callbacks = authapi.NewCallbacks()
+	a.Callbacks.After(authapi.EventAuth, cb.Fn)
 	a.AuthLoginOKPath = "/dashboard"
 
 	sessions := mocks.NewMockClientStorer()
@@ -237,8 +237,8 @@ func TestAuth_loginHandlerFunc_POST(t *testing.T) {
 		t.Error("Unexpected error:", err)
 	}
 
-	if _, ok := ctx.Values[authboss.CookieRemember]; !ok {
-		t.Error("Authboss cookie remember should be set for the callback")
+	if _, ok := ctx.Values[authapi.CookieRemember]; !ok {
+		t.Error("authapi cookie remember should be set for the callback")
 	}
 	if !cb.HasBeenCalled {
 		t.Error("Expected after callback to have been called")
@@ -253,7 +253,7 @@ func TestAuth_loginHandlerFunc_POST(t *testing.T) {
 		t.Error("Unexpeced location:", loc)
 	}
 
-	val, ok := sessions.Values[authboss.SessionKey]
+	val, ok := sessions.Values[authapi.SessionKey]
 	if !ok {
 		t.Error("Expected session to be set")
 	} else if val != "john" {
@@ -288,12 +288,12 @@ func TestAuth_loginHandlerFunc_OtherMethods(t *testing.T) {
 func TestAuth_validateCredentials(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	storer := mocks.NewMockStorer()
 	ab.Storer = storer
 
 	ctx := ab.NewContext()
-	storer.Users["john"] = authboss.Attributes{"password": "$2a$10$pgFsuQwdhwOdZp/v52dvHeEi53ZaI7dGmtwK4bAzGGN5A4nT6doqm"}
+	storer.Users["john"] = authapi.Attributes{"password": "$2a$10$pgFsuQwdhwOdZp/v52dvHeEi53ZaI7dGmtwK4bAzGGN5A4nT6doqm"}
 	if _, err := validateCredentials(ctx, "john", "a"); err != nil {
 		t.Error("Unexpected error:", err)
 	}
@@ -320,26 +320,26 @@ func TestAuth_logoutHandlerFunc_GET(t *testing.T) {
 
 	a.AuthLogoutOKPath = "/dashboard"
 
-	ctx, w, r, sessionStorer := testRequest(a.Authboss, "GET")
-	sessionStorer.Put(authboss.SessionKey, "asdf")
-	sessionStorer.Put(authboss.SessionLastAction, "1234")
+	ctx, w, r, sessionStorer := testRequest(a.authapi, "GET")
+	sessionStorer.Put(authapi.SessionKey, "asdf")
+	sessionStorer.Put(authapi.SessionLastAction, "1234")
 
-	cookieStorer := mocks.NewMockClientStorer(authboss.CookieRemember, "qwert")
+	cookieStorer := mocks.NewMockClientStorer(authapi.CookieRemember, "qwert")
 	ctx.CookieStorer = cookieStorer
 
 	if err := a.logoutHandlerFunc(ctx, w, r); err != nil {
 		t.Error("Unexpected error:", err)
 	}
 
-	if val, ok := sessionStorer.Get(authboss.SessionKey); ok {
+	if val, ok := sessionStorer.Get(authapi.SessionKey); ok {
 		t.Error("Unexpected session key:", val)
 	}
 
-	if val, ok := sessionStorer.Get(authboss.SessionLastAction); ok {
+	if val, ok := sessionStorer.Get(authapi.SessionLastAction); ok {
 		t.Error("Unexpected last action:", val)
 	}
 
-	if val, ok := cookieStorer.Get(authboss.CookieRemember); ok {
+	if val, ok := cookieStorer.Get(authapi.CookieRemember); ok {
 		t.Error("Unexpected rm cookie:", val)
 	}
 

@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import "fmt"
 

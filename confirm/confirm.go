@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/response"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/response"
 )
 
 // Storer and FormValue constants
@@ -33,7 +33,7 @@ var (
 // ConfirmStorer must be implemented in order to satisfy the confirm module's
 // storage requirements.
 type ConfirmStorer interface {
-	authboss.Storer
+	authapi.Storer
 	// ConfirmUser looks up a user by a confirm token. See confirm module for
 	// attribute names. If the token is not found in the data store,
 	// simply return nil, ErrUserNotFound.
@@ -41,19 +41,19 @@ type ConfirmStorer interface {
 }
 
 func init() {
-	authboss.RegisterModule("confirm", &Confirm{})
+	authapi.RegisterModule("confirm", &Confirm{})
 }
 
 // Confirm module
 type Confirm struct {
-	*authboss.Authboss
+	*authapi.authapi
 	emailHTMLTemplates response.Templates
 	emailTextTemplates response.Templates
 }
 
 // Initialize the module
-func (c *Confirm) Initialize(ab *authboss.Authboss) (err error) {
-	c.Authboss = ab
+func (c *Confirm) Initialize(ab *authapi.authapi) (err error) {
+	c.authapi = ab
 
 	var ok bool
 	storer, ok := c.Storer.(ConfirmStorer)
@@ -70,45 +70,45 @@ func (c *Confirm) Initialize(ab *authboss.Authboss) (err error) {
 		return err
 	}
 
-	c.Callbacks.After(authboss.EventGetUser, func(ctx *authboss.Context) error {
+	c.Callbacks.After(authapi.EventGetUser, func(ctx *authapi.Context) error {
 		_, err := c.beforeGet(ctx)
 		return err
 	})
-	c.Callbacks.Before(authboss.EventAuth, c.beforeGet)
-	c.Callbacks.After(authboss.EventRegister, c.afterRegister)
+	c.Callbacks.Before(authapi.EventAuth, c.beforeGet)
+	c.Callbacks.After(authapi.EventRegister, c.afterRegister)
 
 	return nil
 }
 
 // Routes for the module
-func (c *Confirm) Routes() authboss.RouteTable {
-	return authboss.RouteTable{
+func (c *Confirm) Routes() authapi.RouteTable {
+	return authapi.RouteTable{
 		"/confirm": c.confirmHandler,
 	}
 }
 
 // Storage requirements
-func (c *Confirm) Storage() authboss.StorageOptions {
-	return authboss.StorageOptions{
-		c.PrimaryID:         authboss.String,
-		authboss.StoreEmail: authboss.String,
-		StoreConfirmToken:   authboss.String,
-		StoreConfirmed:      authboss.Bool,
+func (c *Confirm) Storage() authapi.StorageOptions {
+	return authapi.StorageOptions{
+		c.PrimaryID:         authapi.String,
+		authapi.StoreEmail: authapi.String,
+		StoreConfirmToken:   authapi.String,
+		StoreConfirmed:      authapi.Bool,
 	}
 }
 
-func (c *Confirm) beforeGet(ctx *authboss.Context) (authboss.Interrupt, error) {
+func (c *Confirm) beforeGet(ctx *authapi.Context) (authapi.Interrupt, error) {
 	if confirmed, err := ctx.User.BoolErr(StoreConfirmed); err != nil {
-		return authboss.InterruptNone, err
+		return authapi.InterruptNone, err
 	} else if !confirmed {
-		return authboss.InterruptAccountNotConfirmed, nil
+		return authapi.InterruptAccountNotConfirmed, nil
 	}
 
-	return authboss.InterruptNone, nil
+	return authapi.InterruptNone, nil
 }
 
 // AfterRegister ensures the account is not activated.
-func (c *Confirm) afterRegister(ctx *authboss.Context) error {
+func (c *Confirm) afterRegister(ctx *authapi.Context) error {
 	if ctx.User == nil {
 		return errUserMissing
 	}
@@ -125,7 +125,7 @@ func (c *Confirm) afterRegister(ctx *authboss.Context) error {
 		return err
 	}
 
-	email, err := ctx.User.StringErr(authboss.StoreEmail)
+	email, err := ctx.User.StringErr(authapi.StoreEmail)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (c *Confirm) afterRegister(ctx *authboss.Context) error {
 	return nil
 }
 
-var goConfirmEmail = func(c *Confirm, ctx *authboss.Context, to, token string) {
+var goConfirmEmail = func(c *Confirm, ctx *authapi.Context, to, token string) {
 	if ctx.MailMaker != nil {
 		c.confirmEmail(ctx, to, token)
 	} else {
@@ -144,11 +144,11 @@ var goConfirmEmail = func(c *Confirm, ctx *authboss.Context, to, token string) {
 }
 
 // confirmEmail sends a confirmation e-mail.
-func (c *Confirm) confirmEmail(ctx *authboss.Context, to, token string) {
+func (c *Confirm) confirmEmail(ctx *authapi.Context, to, token string) {
 	p := path.Join(c.MountPath, "confirm")
 	url := fmt.Sprintf("%s%s?%s=%s", c.SiteURL, p, url.QueryEscape(FormValueConfirm), url.QueryEscape(token))
 
-	email := authboss.Email{
+	email := authapi.Email{
 		To:       []string{to},
 		From:     c.EmailFrom,
 		FromName: c.EmailFromName,
@@ -161,15 +161,15 @@ func (c *Confirm) confirmEmail(ctx *authboss.Context, to, token string) {
 	}
 }
 
-func (c *Confirm) confirmHandler(ctx *authboss.Context, w http.ResponseWriter, r *http.Request) error {
+func (c *Confirm) confirmHandler(ctx *authapi.Context, w http.ResponseWriter, r *http.Request) error {
 	token := r.FormValue(FormValueConfirm)
 	if len(token) == 0 {
-		return authboss.ClientDataErr{Name: FormValueConfirm}
+		return authapi.ClientDataErr{Name: FormValueConfirm}
 	}
 
 	toHash, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
-		return authboss.ErrAndRedirect{
+		return authapi.ErrAndRedirect{
 			Location: "/", Err: fmt.Errorf("confirm: token failed to decode %q => %v\n", token, err),
 		}
 	}
@@ -178,13 +178,13 @@ func (c *Confirm) confirmHandler(ctx *authboss.Context, w http.ResponseWriter, r
 
 	dbTok := base64.StdEncoding.EncodeToString(sum[:])
 	user, err := ctx.Storer.(ConfirmStorer).ConfirmUser(dbTok)
-	if err == authboss.ErrUserNotFound {
-		return authboss.ErrAndRedirect{Location: "/", Err: errors.New("confirm: token not found")}
+	if err == authapi.ErrUserNotFound {
+		return authapi.ErrAndRedirect{Location: "/", Err: errors.New("confirm: token not found")}
 	} else if err != nil {
 		return err
 	}
 
-	ctx.User = authboss.Unbind(user)
+	ctx.User = authapi.Unbind(user)
 
 	ctx.User[StoreConfirmToken] = ""
 	ctx.User[StoreConfirmed] = true
@@ -192,12 +192,12 @@ func (c *Confirm) confirmHandler(ctx *authboss.Context, w http.ResponseWriter, r
 	if err := ctx.SaveUser(); err != nil {
 		return err
 	}
-	if c.Authboss.AllowInsecureLoginAfterConfirm {
+	if c.authapi.AllowInsecureLoginAfterConfirm {
 		key, err := ctx.User.StringErr(c.PrimaryID)
 		if err != nil {
 			return err
 		}
-		ctx.SessionStorer.Put(authboss.SessionKey, key)
+		ctx.SessionStorer.Put(authapi.SessionKey, key)
 	}
 	return response.JSONResponse(ctx,w,r,false,"Account confirmed.",nil)
 }

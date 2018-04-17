@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"errors"
@@ -43,7 +43,7 @@ func TestErrAndRedirect(t *testing.T) {
 func TestRenderErr(t *testing.T) {
 	t.Parallel()
 
-	estr := `Error rendering template "lol": cause, data: authboss.HTMLData{"a":5}`
+	estr := `Error rendering template "lol": cause, data: authapi.HTMLData{"a":5}`
 	err := RenderErr{"lol", NewHTMLData("a", 5), errors.New("cause")}
 	if str := err.Error(); str != estr {
 		t.Error("Error was wrong:", str)

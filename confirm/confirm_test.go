@@ -12,12 +12,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 func setup() *Confirm {
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.Storer = mocks.NewMockStorer()
 	ab.LayoutHTMLEmail = template.Must(template.New("").Parse(`email ^_^`))
 	ab.LayoutTextEmail = template.Must(template.New("").Parse(`email`))
@@ -32,7 +32,7 @@ func setup() *Confirm {
 func TestConfirm_Initialize(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	c := &Confirm{}
 	if err := c.Initialize(ab); err == nil {
 		t.Error("Should cry about not having a storer.")
@@ -60,13 +60,13 @@ func TestConfirm_Routes(t *testing.T) {
 func TestConfirm_Storage(t *testing.T) {
 	t.Parallel()
 
-	c := &Confirm{Authboss: authboss.New()}
+	c := &Confirm{authapi: authapi.New()}
 	storage := c.Storage()
 
-	if authboss.String != storage[StoreConfirmToken] {
+	if authapi.String != storage[StoreConfirmToken] {
 		t.Error("Expect StoreConfirmToken to be a string.")
 	}
-	if authboss.Bool != storage[StoreConfirmed] {
+	if authapi.Bool != storage[StoreConfirmed] {
 		t.Error("Expect StoreConfirmed to be a bool.")
 	}
 }
@@ -81,21 +81,21 @@ func TestConfirm_BeforeGet(t *testing.T) {
 		t.Error("Should stop the get due to attribute missing:", err)
 	}
 
-	ctx.User = authboss.Attributes{
+	ctx.User = authapi.Attributes{
 		StoreConfirmed: false,
 	}
 
-	if interrupt, err := c.beforeGet(ctx); interrupt != authboss.InterruptAccountNotConfirmed {
+	if interrupt, err := c.beforeGet(ctx); interrupt != authapi.InterruptAccountNotConfirmed {
 		t.Error("Should stop the get due to non-confirm:", interrupt)
 	} else if err != nil {
 		t.Error(err)
 	}
 
-	ctx.User = authboss.Attributes{
+	ctx.User = authapi.Attributes{
 		StoreConfirmed: true,
 	}
 
-	if interrupt, err := c.beforeGet(ctx); interrupt != authboss.InterruptNone || err != nil {
+	if interrupt, err := c.beforeGet(ctx); interrupt != authapi.InterruptNone || err != nil {
 		t.Error(interrupt, err)
 	}
 }
@@ -107,12 +107,12 @@ func TestConfirm_AfterRegister(t *testing.T) {
 	ctx := c.NewContext()
 	log := &bytes.Buffer{}
 	c.LogWriter = log
-	c.Mailer = authboss.LogMailer(log)
-	c.PrimaryID = authboss.StoreUsername
+	c.Mailer = authapi.LogMailer(log)
+	c.PrimaryID = authapi.StoreUsername
 
 	sentEmail := false
 
-	goConfirmEmail = func(c *Confirm, ctx *authboss.Context, to, token string) {
+	goConfirmEmail = func(c *Confirm, ctx *authapi.Context, to, token string) {
 		c.confirmEmail(ctx, to, token)
 		sentEmail = true
 	}
@@ -121,12 +121,12 @@ func TestConfirm_AfterRegister(t *testing.T) {
 		t.Error("Expected it to die with user error:", err)
 	}
 
-	ctx.User = authboss.Attributes{c.PrimaryID: "username"}
-	if err := c.afterRegister(ctx); err == nil || err.(authboss.AttributeErr).Name != "email" {
+	ctx.User = authapi.Attributes{c.PrimaryID: "username"}
+	if err := c.afterRegister(ctx); err == nil || err.(authapi.AttributeErr).Name != "email" {
 		t.Error("Expected it to die with e-mail address error:", err)
 	}
 
-	ctx.User[authboss.StoreEmail] = "a@a.com"
+	ctx.User[authapi.StoreEmail] = "a@a.com"
 	log.Reset()
 	c.afterRegister(ctx)
 	if str := log.String(); !strings.Contains(str, "Subject: Confirm New Account") {
@@ -144,19 +144,19 @@ func TestConfirm_ConfirmHandlerErrors(t *testing.T) {
 	c := setup()
 	log := &bytes.Buffer{}
 	c.LogWriter = log
-	c.Mailer = authboss.LogMailer(log)
+	c.Mailer = authapi.LogMailer(log)
 
 	tests := []struct {
 		URL       string
 		Confirmed bool
 		Error     error
 	}{
-		{"http://localhost", false, authboss.ClientDataErr{Name: FormValueConfirm}},
+		{"http://localhost", false, authapi.ClientDataErr{Name: FormValueConfirm}},
 		{"http://localhost?cnf=c$ats", false,
-			authboss.ErrAndRedirect{Location: "/", Err: errors.New("confirm: token failed to decode \"c$ats\" => illegal base64 data at input byte 1\n")},
+			authapi.ErrAndRedirect{Location: "/", Err: errors.New("confirm: token failed to decode \"c$ats\" => illegal base64 data at input byte 1\n")},
 		},
 		{"http://localhost?cnf=SGVsbG8sIHBsYXlncm91bmQ=", false,
-			authboss.ErrAndRedirect{Location: "/", Err: errors.New(`confirm: token not found`)},
+			authapi.ErrAndRedirect{Location: "/", Err: errors.New(`confirm: token not found`)},
 		},
 	}
 
@@ -188,8 +188,8 @@ func TestConfirm_Confirm(t *testing.T) {
 	ctx := c.NewContext()
 	log := &bytes.Buffer{}
 	c.LogWriter = log
-	c.PrimaryID = authboss.StoreUsername
-	c.Mailer = authboss.LogMailer(log)
+	c.PrimaryID = authapi.StoreUsername
+	c.Mailer = authapi.LogMailer(log)
 
 	// Create a token
 	token := []byte("hi")
@@ -198,8 +198,8 @@ func TestConfirm_Confirm(t *testing.T) {
 	// Create the "database"
 	storer := mocks.NewMockStorer()
 	c.Storer = storer
-	user := authboss.Attributes{
-		authboss.StoreUsername: "usern",
+	user := authapi.Attributes{
+		authapi.StoreUsername: "usern",
 		StoreConfirmToken:      base64.StdEncoding.EncodeToString(sum[:]),
 	}
 	storer.Users["usern"] = user
@@ -233,11 +233,11 @@ func TestConfirm_Confirm(t *testing.T) {
 		t.Error("Confirm token should have been wiped out.")
 	}
 
-	if _, ok := ctx.SessionStorer.Get(authboss.SessionKey); ok {
+	if _, ok := ctx.SessionStorer.Get(authapi.SessionKey); ok {
 		t.Error("Should not have logged the user in since AllowInsecureLoginAfterConfirm is false.")
 	}
 
-	if success, ok := ctx.SessionStorer.Get(authboss.FlashSuccessKey); !ok || len(success) == 0 {
+	if success, ok := ctx.SessionStorer.Get(authapi.FlashSuccessKey); !ok || len(success) == 0 {
 		t.Error("Should have left a nice message.")
 	}
 }

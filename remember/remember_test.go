@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
 func TestInitialize(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	r := &Remember{}
 	err := r.Initialize(ab)
 	if err == nil {
@@ -35,7 +35,7 @@ func TestInitialize(t *testing.T) {
 func TestAfterAuth(t *testing.T) {
 	t.Parallel()
 
-	r := Remember{authboss.New()}
+	r := Remember{authapi.New()}
 	storer := mocks.NewMockStorer()
 	r.Storer = storer
 
@@ -51,15 +51,15 @@ func TestAfterAuth(t *testing.T) {
 	ctx := r.NewContext()
 	ctx.SessionStorer = session
 	ctx.CookieStorer = cookies
-	ctx.User = authboss.Attributes{r.PrimaryID: "test@email.com"}
+	ctx.User = authapi.Attributes{r.PrimaryID: "test@email.com"}
 
-	ctx.Values = map[string]string{authboss.CookieRemember: "true"}
+	ctx.Values = map[string]string{authapi.CookieRemember: "true"}
 
 	if err := r.afterAuth(ctx); err != nil {
 		t.Error(err)
 	}
 
-	if _, ok := cookies.Values[authboss.CookieRemember]; !ok {
+	if _, ok := cookies.Values[authapi.CookieRemember]; !ok {
 		t.Error("Expected a cookie to have been set.")
 	}
 }
@@ -67,26 +67,26 @@ func TestAfterAuth(t *testing.T) {
 func TestAfterOAuth(t *testing.T) {
 	t.Parallel()
 
-	r := Remember{authboss.New()}
+	r := Remember{authapi.New()}
 	storer := mocks.NewMockStorer()
 	r.Storer = storer
 
 	cookies := mocks.NewMockClientStorer()
-	session := mocks.NewMockClientStorer(authboss.SessionOAuth2Params, `{"rm":"true"}`)
+	session := mocks.NewMockClientStorer(authapi.SessionOAuth2Params, `{"rm":"true"}`)
 
 	ctx := r.NewContext()
 	ctx.SessionStorer = session
 	ctx.CookieStorer = cookies
-	ctx.User = authboss.Attributes{
-		authboss.StoreOAuth2UID:      "uid",
-		authboss.StoreOAuth2Provider: "google",
+	ctx.User = authapi.Attributes{
+		authapi.StoreOAuth2UID:      "uid",
+		authapi.StoreOAuth2Provider: "google",
 	}
 
 	if err := r.afterOAuth(ctx); err != nil {
 		t.Error(err)
 	}
 
-	if _, ok := cookies.Values[authboss.CookieRemember]; !ok {
+	if _, ok := cookies.Values[authapi.CookieRemember]; !ok {
 		t.Error("Expected a cookie to have been set.")
 	}
 }
@@ -94,7 +94,7 @@ func TestAfterOAuth(t *testing.T) {
 func TestAfterPasswordReset(t *testing.T) {
 	t.Parallel()
 
-	r := Remember{authboss.New()}
+	r := Remember{authapi.New()}
 
 	id := "test@email.com"
 
@@ -103,10 +103,10 @@ func TestAfterPasswordReset(t *testing.T) {
 	session := mocks.NewMockClientStorer()
 	cookies := mocks.NewMockClientStorer()
 	storer.Tokens[id] = []string{"one", "two"}
-	cookies.Values[authboss.CookieRemember] = "token"
+	cookies.Values[authapi.CookieRemember] = "token"
 
 	ctx := r.NewContext()
-	ctx.User = authboss.Attributes{r.PrimaryID: id}
+	ctx.User = authapi.Attributes{r.PrimaryID: id}
 	ctx.SessionStorer = session
 	ctx.CookieStorer = cookies
 
@@ -114,7 +114,7 @@ func TestAfterPasswordReset(t *testing.T) {
 		t.Error(err)
 	}
 
-	if _, ok := cookies.Values[authboss.CookieRemember]; ok {
+	if _, ok := cookies.Values[authapi.CookieRemember]; ok {
 		t.Error("Expected the remember cookie to be deleted.")
 	}
 
@@ -126,7 +126,7 @@ func TestAfterPasswordReset(t *testing.T) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	r := &Remember{authboss.New()}
+	r := &Remember{authapi.New()}
 	storer := mocks.NewMockStorer()
 	r.Storer = storer
 	cookies := mocks.NewMockClientStorer()
@@ -148,7 +148,7 @@ func TestNew(t *testing.T) {
 		t.Error("Expected a token to be saved.")
 	}
 
-	if token != cookies.Values[authboss.CookieRemember] {
+	if token != cookies.Values[authapi.CookieRemember] {
 		t.Error("Expected a cookie set with the token.")
 	}
 }
@@ -156,7 +156,7 @@ func TestNew(t *testing.T) {
 func TestAuth(t *testing.T) {
 	t.Parallel()
 
-	r := &Remember{authboss.New()}
+	r := &Remember{authapi.New()}
 	storer := mocks.NewMockStorer()
 	r.Storer = storer
 
@@ -172,26 +172,26 @@ func TestAuth(t *testing.T) {
 		t.Error("Unexpected error:", err)
 	}
 
-	cookie, _ := cookies.Get(authboss.CookieRemember)
+	cookie, _ := cookies.Get(authapi.CookieRemember)
 
 	interrupt, err := r.auth(ctx)
 	if err != nil {
 		t.Error("Unexpected error:", err)
 	}
 
-	if session.Values[authboss.SessionHalfAuthKey] != "true" {
+	if session.Values[authapi.SessionHalfAuthKey] != "true" {
 		t.Error("The user should have been half-authed.")
 	}
 
-	if session.Values[authboss.SessionKey] != key {
+	if session.Values[authapi.SessionKey] != key {
 		t.Error("The user should have been logged in.")
 	}
 
-	if chocolateChip, _ := cookies.Get(authboss.CookieRemember); chocolateChip == cookie {
+	if chocolateChip, _ := cookies.Get(authapi.CookieRemember); chocolateChip == cookie {
 		t.Error("Expected cookie to be different")
 	}
 
-	if authboss.InterruptNone != interrupt {
+	if authapi.InterruptNone != interrupt {
 		t.Error("Keys should have matched:", interrupt)
 	}
 }

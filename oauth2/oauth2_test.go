@@ -14,12 +14,12 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/facebook"
 	"golang.org/x/oauth2/google"
-	"github.com/socodeit/authboss"
-	"github.com/socodeit/authboss/internal/mocks"
+	"github.com/socodeit/authapi"
+	"github.com/socodeit/authapi/internal/mocks"
 )
 
-var testProviders = map[string]authboss.OAuth2Provider{
-	"google": authboss.OAuth2Provider{
+var testProviders = map[string]authapi.OAuth2Provider{
+	"google": authapi.OAuth2Provider{
 		OAuth2Config: &oauth2.Config{
 			ClientID:     `jazz`,
 			ClientSecret: `hands`,
@@ -29,7 +29,7 @@ var testProviders = map[string]authboss.OAuth2Provider{
 		Callback:         Google,
 		AdditionalParams: url.Values{"include_requested_scopes": []string{"true"}},
 	},
-	"facebook": authboss.OAuth2Provider{
+	"facebook": authapi.OAuth2Provider{
 		OAuth2Config: &oauth2.Config{
 			ClientID:     `jazz`,
 			ClientSecret: `hands`,
@@ -43,7 +43,7 @@ var testProviders = map[string]authboss.OAuth2Provider{
 func TestInitialize(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	ab.OAuth2Storer = mocks.NewMockStorer()
 	o := OAuth2{}
 	if err := o.Initialize(ab); err != nil {
@@ -57,7 +57,7 @@ func TestRoutes(t *testing.T) {
 	root := "https://localhost:8080"
 	mount := "/auth"
 
-	ab := authboss.New()
+	ab := authapi.New()
 	o := OAuth2{ab}
 
 	ab.RootURL = root
@@ -89,7 +89,7 @@ func TestRoutes(t *testing.T) {
 func TestOAuth2Init(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	oauth := OAuth2{ab}
 	session := mocks.NewMockClientStorer()
 
@@ -119,12 +119,12 @@ func TestOAuth2Init(t *testing.T) {
 	if query["include_requested_scopes"][0] != "true" {
 		t.Error("Missing extra parameters:", loc)
 	}
-	state := query[authboss.FormValueOAuth2State][0]
+	state := query[authapi.FormValueOAuth2State][0]
 	if len(state) == 0 {
 		t.Error("It should have had some state:", loc)
 	}
 
-	if params := session.Values[authboss.SessionOAuth2Params]; params != `{"redir":"/my/redirect#lol","rm":"true"}` {
+	if params := session.Values[authapi.SessionOAuth2Params]; params != `{"redir":"/my/redirect#lol","rm":"true"}` {
 		t.Error("The params were wrong:", params)
 	}
 }
@@ -132,7 +132,7 @@ func TestOAuth2Init(t *testing.T) {
 func TestOAuthSuccess(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	oauth := OAuth2{ab}
 
 	expiry := time.Now().UTC().Add(3600 * time.Second)
@@ -143,10 +143,10 @@ func TestOAuthSuccess(t *testing.T) {
 		Expiry:       expiry,
 	}
 
-	fakeCallback := func(_ context.Context, _ oauth2.Config, _ *oauth2.Token) (authboss.Attributes, error) {
-		return authboss.Attributes{
-			authboss.StoreOAuth2UID: "uid",
-			authboss.StoreEmail:     "email",
+	fakeCallback := func(_ context.Context, _ oauth2.Config, _ *oauth2.Token) (authapi.Attributes, error) {
+		return authapi.Attributes{
+			authapi.StoreOAuth2UID: "uid",
+			authapi.StoreEmail:     "email",
 		}, nil
 	}
 
@@ -158,8 +158,8 @@ func TestOAuthSuccess(t *testing.T) {
 		return fakeToken, nil
 	}
 
-	ab.OAuth2Providers = map[string]authboss.OAuth2Provider{
-		"fake": authboss.OAuth2Provider{
+	ab.OAuth2Providers = map[string]authapi.OAuth2Provider{
+		"fake": authapi.OAuth2Provider{
 			OAuth2Config: &oauth2.Config{
 				ClientID:     `jazz`,
 				ClientSecret: `hands`,
@@ -183,8 +183,8 @@ func TestOAuthSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx := ab.NewContext()
 	session := mocks.NewMockClientStorer()
-	session.Put(authboss.SessionOAuth2State, authboss.FormValueOAuth2State)
-	session.Put(authboss.SessionOAuth2Params, `{"redir":"/myurl?myparam=5","rm":"true"}`)
+	session.Put(authapi.SessionOAuth2State, authapi.FormValueOAuth2State)
+	session.Put(authapi.SessionOAuth2Params, `{"redir":"/myurl?myparam=5","rm":"true"}`)
 
 	storer := mocks.NewMockStorer()
 	ctx.SessionStorer = session
@@ -201,23 +201,23 @@ func TestOAuthSuccess(t *testing.T) {
 		t.Error("Couldn't find user.")
 	}
 
-	if val, _ := user.String(authboss.StoreEmail); val != "email" {
+	if val, _ := user.String(authapi.StoreEmail); val != "email" {
 		t.Error("Email was wrong:", val)
 	}
-	if val, _ := user.String(authboss.StoreOAuth2Token); val != "token" {
+	if val, _ := user.String(authapi.StoreOAuth2Token); val != "token" {
 		t.Error("Token was wrong:", val)
 	}
-	if val, _ := user.String(authboss.StoreOAuth2Refresh); val != "refresh" {
+	if val, _ := user.String(authapi.StoreOAuth2Refresh); val != "refresh" {
 		t.Error("Refresh was wrong:", val)
 	}
-	if val, _ := user.DateTime(authboss.StoreOAuth2Expiry); !val.Equal(expiry) {
+	if val, _ := user.DateTime(authapi.StoreOAuth2Expiry); !val.Equal(expiry) {
 		t.Error("Expiry was wrong:", val)
 	}
 
-	if val, _ := session.Get(authboss.SessionKey); val != "uid;fake" {
+	if val, _ := session.Get(authapi.SessionKey); val != "uid;fake" {
 		t.Error("User was not logged in:", val)
 	}
-	if _, ok := session.Get(authboss.SessionOAuth2State); ok {
+	if _, ok := session.Get(authapi.SessionOAuth2State); ok {
 		t.Error("Expected state to be deleted.")
 	}
 
@@ -231,16 +231,16 @@ func TestOAuthSuccess(t *testing.T) {
 func TestOAuthXSRFFailure(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	oauth := OAuth2{ab}
 
 	session := mocks.NewMockClientStorer()
-	session.Put(authboss.SessionOAuth2State, authboss.FormValueOAuth2State)
+	session.Put(authapi.SessionOAuth2State, authapi.FormValueOAuth2State)
 
 	ab.OAuth2Providers = testProviders
 
 	values := url.Values{}
-	values.Set(authboss.FormValueOAuth2State, "notstate")
+	values.Set(authapi.FormValueOAuth2State, "notstate")
 	values.Set("code", "code")
 
 	ctx := ab.NewContext()
@@ -256,7 +256,7 @@ func TestOAuthXSRFFailure(t *testing.T) {
 func TestOAuthFailure(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	oauth := OAuth2{ab}
 
 	ab.OAuth2Providers = testProviders
@@ -268,12 +268,12 @@ func TestOAuthFailure(t *testing.T) {
 
 	ctx := ab.NewContext()
 	session := mocks.NewMockClientStorer()
-	session.Put(authboss.SessionOAuth2State, authboss.FormValueOAuth2State)
+	session.Put(authapi.SessionOAuth2State, authapi.FormValueOAuth2State)
 	ctx.SessionStorer = session
 	r, _ := http.NewRequest("GET", "/oauth2/google?"+values.Encode(), nil)
 
 	err := oauth.oauthCallback(ctx, nil, r)
-	if red, ok := err.(authboss.ErrAndRedirect); !ok {
+	if red, ok := err.(authapi.ErrAndRedirect); !ok {
 		t.Error("Should be a redirect error")
 	} else if len(red.FlashError) == 0 {
 		t.Error("Should have a flash error.")
@@ -285,7 +285,7 @@ func TestOAuthFailure(t *testing.T) {
 func TestLogout(t *testing.T) {
 	t.Parallel()
 
-	ab := authboss.New()
+	ab := authapi.New()
 	oauth := OAuth2{ab}
 	ab.AuthLogoutOKPath = "/dashboard"
 
@@ -293,8 +293,8 @@ func TestLogout(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx := ab.NewContext()
-	session := mocks.NewMockClientStorer(authboss.SessionKey, "asdf", authboss.SessionLastAction, "1234")
-	cookies := mocks.NewMockClientStorer(authboss.CookieRemember, "qwert")
+	session := mocks.NewMockClientStorer(authapi.SessionKey, "asdf", authapi.SessionLastAction, "1234")
+	cookies := mocks.NewMockClientStorer(authapi.CookieRemember, "qwert")
 	ctx.SessionStorer = session
 	ctx.CookieStorer = cookies
 
@@ -302,15 +302,15 @@ func TestLogout(t *testing.T) {
 		t.Error(err)
 	}
 
-	if val, ok := session.Get(authboss.SessionKey); ok {
+	if val, ok := session.Get(authapi.SessionKey); ok {
 		t.Error("Unexpected session key:", val)
 	}
 
-	if val, ok := session.Get(authboss.SessionLastAction); ok {
+	if val, ok := session.Get(authapi.SessionLastAction); ok {
 		t.Error("Unexpected last action:", val)
 	}
 
-	if val, ok := cookies.Get(authboss.CookieRemember); ok {
+	if val, ok := cookies.Get(authapi.CookieRemember); ok {
 		t.Error("Unexpected rm cookie:", val)
 	}
 

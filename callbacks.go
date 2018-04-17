@@ -1,4 +1,4 @@
-package authboss
+package authapi
 
 import (
 	"fmt"
@@ -61,7 +61,7 @@ type Callbacks struct {
 }
 
 // NewCallbacks creates a new set of before and after callbacks.
-// Called only by authboss internals and for testing.
+// Called only by authapi internals and for testing.
 func NewCallbacks() *Callbacks {
 	return &Callbacks{
 		make(map[Event][]Before),
